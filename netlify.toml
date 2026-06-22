@@ -1,0 +1,10 @@
+# Configuración de despliegue en Netlify para una SPA de Vite.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Redirección para que el ruteo del lado del cliente funcione (SPA).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
