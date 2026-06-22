@@ -54,7 +54,8 @@ create table barrio (
   updated_at        timestamptz not null default now()
 );
 
--- ── PROPIETARIO ── El vecino (lado de la demanda).
+-- ── PROPIETARIO ── El vecino (lado de la demanda). No está atado a un barrio:
+--    se vincula a los barrios a través de sus lotes (uno o varios, en uno o varios barrios).
 create table propietario (
   id          uuid primary key default gen_random_uuid(),
   nombre      text not null,
@@ -64,7 +65,9 @@ create table propietario (
   updated_at  timestamptz not null default now()
 );
 
--- ── LOTE ── Unidad funcional. Pertenece a un barrio y a un propietario.
+-- ── LOTE ── Unidad funcional. Está en UN barrio y tiene UN propietario.
+--    Un propietario puede tener VARIOS lotes; y como cada lote referencia su
+--    propio barrio, esos lotes pueden estar en DISTINTOS barrios.
 create table lote (
   id              uuid primary key default gen_random_uuid(),
   barrio_id       uuid not null references barrio(id) on delete cascade,

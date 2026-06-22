@@ -29,6 +29,15 @@ insert into lote (id, barrio_id, numero, metros2, propietario_id) values
   ('d0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000001', 'B-04', 480.00, 'c0000000-0000-0000-0000-000000000002'),
   ('d0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000001', 'C-21', 350.00, 'c0000000-0000-0000-0000-000000000003');
 
+-- ── Demostración de las relaciones (ilustrativo) ──
+-- Segundo barrio de la MISMA administración -> una administración con varios barrios.
+insert into barrio (id, administracion_id, nombre, localidad, partido, zona, cantidad_lotes, sistema_acceso) values
+  ('b0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001', 'Altos del Río', 'Escobar', 'Escobar', 'GBA Norte', 260, 'Tótem con lectura de QR');
+
+-- Segundo lote de Lucía Berardi, pero en el OTRO barrio -> un propietario con lotes en varios barrios.
+insert into lote (id, barrio_id, numero, metros2, propietario_id) values
+  ('d0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000002', 'L-07', 540.00, 'c0000000-0000-0000-0000-000000000001');
+
 -- ── Prestadores (jardineros) ──
 insert into prestador (id, nombre, cuit_cuil, celular, domicilio, tipo_servicio_principal, horario_trabajo, zona_preferente, activo) values
   ('e0000000-0000-0000-0000-000000000001', 'Roberto Esquivel', '20-28333444-5', '+54 9 11 6666-3001', 'Del Viso, Pilar', 'jardineria', 'Lun-Vie 8-17', 'GBA Norte', true),

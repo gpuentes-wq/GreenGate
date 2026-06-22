@@ -49,13 +49,18 @@ Sin duplicar ni desincronizar nada.
 
 ## Cómo se conectan (relaciones)
 
-- Una **Administración** gestiona muchos **Barrios**.
-- Un **Barrio** tiene muchos **Lotes**.
-- Un **Lote** pertenece a un **Propietario**.
-- Un **Prestador** trabaja en muchos **Barrios** (y un barrio tiene muchos prestadores).
+> Regla simple: en una relación "uno a muchos", la referencia (la clave foránea) vive del lado "muchos". Por eso las dos relaciones clave **ya quedan cubiertas sin cambiar el esquema**.
+
+- Una **Administración** gestiona muchos **Barrios** (1:N). Cada barrio tiene una sola administración.
+- Un **Barrio** tiene muchos **Lotes** (1:N).
+- Un **Propietario** puede tener muchos **Lotes** (1:N). Y como cada lote está en su propio barrio, **un mismo propietario puede tener lotes en distintos barrios**. El propietario no está atado a ningún barrio: se vincula a través de sus lotes.
+- Un **Prestador** trabaja en muchos **Barrios**, y cada barrio tiene muchos prestadores (N:M).
 - Un **Prestador** tiene varias **Verificaciones** (una por tipo: antecedentes, seguro, identidad).
 - Un **Trabajo** conecta un **Lote** + un **Propietario** + un **Prestador**.
 - Una **Valoración** pertenece a un **Trabajo** y apunta a un **Prestador**.
+
+### Co-propiedad (decisión abierta)
+Hoy cada lote tiene **un** propietario. Si más adelante necesitás que un lote tenga **más de un dueño** (matrimonios, familias), se agrega una tabla intermedia `lote_propietario` sin romper nada de lo ya cargado.
 
 ## El directorio (corazón del MVP)
 
