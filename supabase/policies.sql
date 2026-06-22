@@ -30,6 +30,7 @@ alter table lote                 enable row level security;
 alter table prestador            enable row level security;
 alter table prestador_servicio   enable row level security;
 alter table prestador_barrio     enable row level security;
+alter table prestador_foto       enable row level security;
 alter table verificacion         enable row level security;
 alter table trabajo              enable row level security;
 alter table valoracion           enable row level security;
