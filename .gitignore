@@ -5,6 +5,9 @@ node_modules/
 dist/
 dist-ssr/
 *.local
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
 
 # Variables de entorno (NUNCA subir claves)
 .env
