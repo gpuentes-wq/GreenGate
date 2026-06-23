@@ -1,38 +1,50 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import type { Barrio, PrestadorDirectorio } from './types'
 import { Insignia, EmptyState } from './ui'
+import { AltaBarrioModal } from './AltaBarrioModal'
+import { ValidarPrestadorModal } from './ValidarPrestadorModal'
 
 export default function AdminPanel() {
   const [barrios, setBarrios] = useState<Barrio[]>([])
   const [prestadores, setPrestadores] = useState<PrestadorDirectorio[]>([])
+  const [administracionId, setAdministracionId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [modalBarrio, setModalBarrio] = useState(false)
+  const [validar, setValidar] = useState<{ id: string; nombre: string } | null>(null)
+
+  const cargar = useCallback(async () => {
+    setError(null)
+    const [b, p, a] = await Promise.all([
+      supabase
+        .from('barrio')
+        .select('id,nombre,localidad,zona,cantidad_lotes,etapa_activacion')
+        .order('nombre'),
+      supabase
+        .from('prestador_directorio')
+        .select('*')
+        .order('puntaje_promedio', { ascending: false, nullsFirst: false }),
+      supabase.from('administracion').select('id').limit(1),
+    ])
+    if (b.error) {
+      setError(b.error.message)
+      return
+    }
+    if (p.error) {
+      setError(p.error.message)
+      return
+    }
+    setBarrios((b.data as Barrio[]) ?? [])
+    setPrestadores((p.data as PrestadorDirectorio[]) ?? [])
+    const adm = (a.data as Array<{ id: string }>) ?? []
+    if (adm.length > 0) setAdministracionId(adm[0].id)
+  }, [])
 
   useEffect(() => {
-    async function cargar() {
-      setLoading(true)
-      setError(null)
-      const [b, p] = await Promise.all([
-        supabase
-          .from('barrio')
-          .select('id,nombre,localidad,zona,cantidad_lotes,etapa_activacion')
-          .order('nombre'),
-        supabase
-          .from('prestador_directorio')
-          .select('*')
-          .order('puntaje_promedio', { ascending: false, nullsFirst: false }),
-      ])
-      if (b.error) setError(b.error.message)
-      else if (p.error) setError(p.error.message)
-      else {
-        setBarrios((b.data as Barrio[]) ?? [])
-        setPrestadores((p.data as PrestadorDirectorio[]) ?? [])
-      }
-      setLoading(false)
-    }
-    cargar()
-  }, [])
+    setLoading(true)
+    cargar().finally(() => setLoading(false))
+  }, [cargar])
 
   const pendientes = prestadores.filter(
     (p) => !(p.antecedentes_ok && p.seguro_ok && p.identidad_ok),
@@ -40,10 +52,20 @@ export default function AdminPanel() {
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
-      <h1 className="text-xl font-semibold text-gg-dark">Panel de Administración</h1>
-      <p className="mb-6 text-sm text-gray-500">Gestión de barrios y validación de prestadores</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-gg-dark">Panel de Administración</h1>
+          <p className="text-sm text-gray-500">Gestión de barrios y validación de prestadores</p>
+        </div>
+        <button
+          onClick={() => setModalBarrio(true)}
+          className="rounded-lg bg-gg-green px-4 py-2 text-sm font-medium text-white hover:bg-gg-dark"
+        >
+          + Agregar barrio
+        </button>
+      </div>
 
-      <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <section className="mb-8 mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Tarjeta titulo="Barrios" valor={barrios.length} />
         <Tarjeta titulo="Prestadores" valor={prestadores.length} />
         <Tarjeta titulo="Pendientes de validación" valor={pendientes} acento />
@@ -62,9 +84,7 @@ export default function AdminPanel() {
           <section className="mb-10">
             <h2 className="mb-3 text-lg font-semibold text-gg-dark">Mis barrios</h2>
             {barrios.length === 0 ? (
-              <EmptyState>
-                Todavía no hay datos. Cargá <code>supabase/seed.sql</code> en Supabase.
-              </EmptyState>
+              <EmptyState>Todavía no hay barrios. Agregá el primero con el botón de arriba.</EmptyState>
             ) : (
               <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
                 <table className="w-full text-sm">
@@ -108,6 +128,7 @@ export default function AdminPanel() {
                       <th className="px-4 py-2 font-medium">Servicio</th>
                       <th className="px-4 py-2 font-medium">Puntaje</th>
                       <th className="px-4 py-2 font-medium">Verificaciones</th>
+                      <th className="px-4 py-2"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -127,6 +148,14 @@ export default function AdminPanel() {
                             <Insignia ok={p.identidad_ok} label="Identidad" />
                           </div>
                         </td>
+                        <td className="px-4 py-2 text-right">
+                          <button
+                            onClick={() => setValidar({ id: p.id, nombre: nombreMostrar(p) })}
+                            className="rounded-lg border border-gg-green px-3 py-1 text-sm font-medium text-gg-green hover:bg-gg-light"
+                          >
+                            Validar
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -135,6 +164,27 @@ export default function AdminPanel() {
             )}
           </section>
         </>
+      )}
+
+      {modalBarrio && (
+        <AltaBarrioModal
+          administracionId={administracionId}
+          onClose={() => setModalBarrio(false)}
+          onCreado={() => {
+            setModalBarrio(false)
+            cargar()
+          }}
+        />
+      )}
+
+      {validar && (
+        <ValidarPrestadorModal
+          prestadorId={validar.id}
+          prestadorNombre={validar.nombre}
+          administracionId={administracionId}
+          onClose={() => setValidar(null)}
+          onCambio={cargar}
+        />
       )}
     </main>
   )
