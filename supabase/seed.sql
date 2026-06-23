@@ -4,8 +4,14 @@
 -- Correr DESPUÉS de schema.sql. Carga un ecosistema completo de ejemplo con
 -- barrios reconocibles de la zona norte (Pilar, Escobar, Tigre).
 -- Datos ficticios (administración, personas y montos) sobre barrios reales.
--- Para borrar y recargar, ver el bloque del final.
+-- Es idempotente: el TRUNCATE de abajo limpia cualquier dato de ejemplo previo
+-- antes de cargar, así se puede correr las veces que haga falta sin conflictos.
 -- ════════════════════════════════════════════════════════════════════════
+
+-- ── Limpieza: borra datos de ejemplo previos para recargar sin conflictos ──
+truncate administracion, barrio, propietario, lote, prestador,
+  prestador_servicio, prestador_barrio, prestador_foto, verificacion,
+  trabajo, valoracion, ingreso restart identity cascade;
 
 -- ── Administración (gestiona varios barrios de zona norte) ──
 insert into administracion (id, razon_social, cuit, condicion_fiscal, domicilio, contacto_nombre, contacto_rol, contacto_cel, contacto_email, etapa_comercial, plan, fecha_alta_contrato) values
