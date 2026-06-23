@@ -26,3 +26,9 @@ export interface PrestadorDirectorio {
   seguro_ok: boolean
   identidad_ok: boolean
 }
+
+export interface Especialidad {
+  prestador_id: string
+  tipo: string
+  tarifa: number | null
+}
