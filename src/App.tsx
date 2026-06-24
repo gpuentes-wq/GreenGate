@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from 'react'
 import AdminPanel from './AdminPanel'
 import PropietarioDirectorio from './PropietarioDirectorio'
+import JardineroOnboarding from './JardineroOnboarding'
 
 const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY
-type Vista = 'propietario' | 'admin'
+type Vista = 'propietario' | 'jardinero' | 'admin'
 
 export default function App() {
   const [vista, setVista] = useState<Vista>('propietario')
@@ -18,6 +19,9 @@ export default function App() {
             <Tab activo={vista === 'propietario'} onClick={() => setVista('propietario')}>
               Propietario
             </Tab>
+            <Tab activo={vista === 'jardinero'} onClick={() => setVista('jardinero')}>
+              Jardinero
+            </Tab>
             <Tab activo={vista === 'admin'} onClick={() => setVista('admin')}>
               Administración
             </Tab>
@@ -31,7 +35,9 @@ export default function App() {
         </div>
       )}
 
-      {vista === 'propietario' ? <PropietarioDirectorio /> : <AdminPanel />}
+      {vista === 'propietario' && <PropietarioDirectorio />}
+      {vista === 'jardinero' && <JardineroOnboarding />}
+      {vista === 'admin' && <AdminPanel />}
     </div>
   )
 }
