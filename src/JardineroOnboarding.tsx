@@ -13,9 +13,17 @@ const CONDICIONES = [
 ]
 
 type BarrioOpt = { id: string; nombre: string }
+type PrestadorLite = { id: string; nombre: string; apellido: string | null; razon_social: string | null; es_empresa: boolean }
+
+function nombreJardinero(j: PrestadorLite): string {
+  if (j.es_empresa && j.razon_social) return j.razon_social
+  return j.apellido ? `${j.nombre} ${j.apellido}` : j.nombre
+}
 
 export default function JardineroOnboarding() {
   const [barrios, setBarrios] = useState<BarrioOpt[]>([])
+  const [jardineros, setJardineros] = useState<PrestadorLite[]>([])
+  const [editId, setEditId] = useState<string | null>(null)
 
   const [esEmpresa, setEsEmpresa] = useState(false)
   const [nombre, setNombre] = useState('')
@@ -38,20 +46,23 @@ export default function JardineroOnboarding() {
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [exito, setExito] = useState(false)
+  const [okEditar, setOkEditar] = useState(false)
 
   useEffect(() => {
-    supabase
-      .from('barrio')
-      .select('id,nombre')
-      .order('nombre')
-      .then(({ data }) => setBarrios((data as BarrioOpt[]) ?? []))
+    supabase.from('barrio').select('id,nombre').order('nombre').then(({ data }) => setBarrios((data as BarrioOpt[]) ?? []))
+    cargarJardineros()
   }, [])
 
-  function toggleEsp(t: string) {
-    setEspecialidades((es) => (es.includes(t) ? es.filter((x) => x !== t) : [...es, t]))
+  async function cargarJardineros() {
+    const { data } = await supabase
+      .from('prestador')
+      .select('id,nombre,apellido,razon_social,es_empresa')
+      .order('nombre')
+    setJardineros((data as PrestadorLite[]) ?? [])
   }
 
   function reiniciar() {
+    setEditId(null)
     setEsEmpresa(false)
     setNombre('')
     setApellido('')
@@ -71,6 +82,48 @@ export default function JardineroOnboarding() {
     setBarrioId('')
     setError(null)
     setExito(false)
+    setOkEditar(false)
+  }
+
+  async function seleccionar(id: string) {
+    if (!id) {
+      reiniciar()
+      return
+    }
+    setError(null)
+    setOkEditar(false)
+    const [{ data: p }, { data: esp }] = await Promise.all([
+      supabase.from('prestador').select('*').eq('id', id).single(),
+      supabase.from('prestador_servicio').select('tipo').eq('prestador_id', id),
+    ])
+    if (!p) {
+      setError('No se pudo cargar el perfil')
+      return
+    }
+    const pr = p as Record<string, unknown>
+    setEditId(id)
+    setEsEmpresa(Boolean(pr.es_empresa))
+    setNombre((pr.nombre as string) ?? '')
+    setApellido((pr.apellido as string) ?? '')
+    setRazonSocial((pr.razon_social as string) ?? '')
+    setCelular((pr.celular as string) ?? '')
+    setEmail((pr.email as string) ?? '')
+    setDomicilio((pr.domicilio as string) ?? '')
+    setServicioPrincipal((pr.tipo_servicio_principal as string) ?? 'jardineria')
+    setEspecialidades(((esp as { tipo: string }[]) ?? []).map((e) => e.tipo))
+    setZona((pr.zona_preferente as string) ?? '')
+    setHorario((pr.horario_trabajo as string) ?? '')
+    setExperiencia(pr.anios_experiencia != null ? String(pr.anios_experiencia) : '')
+    setTarifa(pr.tarifa_referencia != null ? String(pr.tarifa_referencia) : '')
+    setDescripcion((pr.descripcion as string) ?? '')
+    setCuit((pr.cuit_cuil as string) ?? '')
+    setCondicion((pr.condicion_fiscal as string) ?? '')
+    setBarrioId('')
+    setExito(false)
+  }
+
+  function toggleEsp(t: string) {
+    setEspecialidades((es) => (es.includes(t) ? es.filter((x) => x !== t) : [...es, t]))
   }
 
   async function enviar(e: FormEvent) {
@@ -85,30 +138,49 @@ export default function JardineroOnboarding() {
     }
     setGuardando(true)
     setError(null)
+    setOkEditar(false)
+
+    const base = {
+      nombre: nombre.trim(),
+      apellido: apellido.trim() || null,
+      razon_social: esEmpresa ? razonSocial.trim() || null : null,
+      es_empresa: esEmpresa,
+      celular: celular.trim(),
+      email: email.trim() || null,
+      domicilio: domicilio.trim() || null,
+      cuit_cuil: cuit.trim() || null,
+      condicion_fiscal: condicion || null,
+      tipo_servicio_principal: servicioPrincipal,
+      zona_preferente: zona.trim() || null,
+      horario_trabajo: horario.trim() || null,
+      descripcion: descripcion.trim() || null,
+      anios_experiencia: experiencia ? Number(experiencia) : null,
+      tarifa_referencia: tarifa ? Number(tarifa) : null,
+    }
+    const espSel = especialidades.filter((t) => t !== servicioPrincipal)
+
+    if (editId) {
+      const { error: uErr } = await supabase.from('prestador').update(base).eq('id', editId)
+      if (uErr) {
+        setGuardando(false)
+        setError(uErr.message)
+        return
+      }
+      await supabase.from('prestador_servicio').delete().eq('prestador_id', editId)
+      if (espSel.length > 0) {
+        await supabase.from('prestador_servicio').insert(espSel.map((t) => ({ prestador_id: editId, tipo: t })))
+      }
+      setGuardando(false)
+      setOkEditar(true)
+      cargarJardineros()
+      return
+    }
 
     const { data, error: pErr } = await supabase
       .from('prestador')
-      .insert({
-        nombre: nombre.trim(),
-        apellido: apellido.trim() || null,
-        razon_social: esEmpresa ? razonSocial.trim() || null : null,
-        es_empresa: esEmpresa,
-        celular: celular.trim(),
-        email: email.trim() || null,
-        domicilio: domicilio.trim() || null,
-        cuit_cuil: cuit.trim() || null,
-        condicion_fiscal: condicion || null,
-        tipo_servicio_principal: servicioPrincipal,
-        zona_preferente: zona.trim() || null,
-        horario_trabajo: horario.trim() || null,
-        descripcion: descripcion.trim() || null,
-        anios_experiencia: experiencia ? Number(experiencia) : null,
-        tarifa_referencia: tarifa ? Number(tarifa) : null,
-        activo: true,
-      })
+      .insert({ ...base, activo: true })
       .select('id')
       .single()
-
     if (pErr || !data) {
       setGuardando(false)
       setError(pErr?.message ?? 'No se pudo crear el perfil')
@@ -116,11 +188,9 @@ export default function JardineroOnboarding() {
     }
     const prestadorId = (data as { id: string }).id
 
-    const esp = especialidades.filter((t) => t !== servicioPrincipal)
-    if (esp.length > 0) {
-      await supabase.from('prestador_servicio').insert(esp.map((t) => ({ prestador_id: prestadorId, tipo: t })))
+    if (espSel.length > 0) {
+      await supabase.from('prestador_servicio').insert(espSel.map((t) => ({ prestador_id: prestadorId, tipo: t })))
     }
-
     if (barrioId) {
       await supabase.from('prestador_barrio').insert({ prestador_id: prestadorId, barrio_id: barrioId, habilitado: false })
       await supabase.from('verificacion').insert([
@@ -129,9 +199,9 @@ export default function JardineroOnboarding() {
         { prestador_id: prestadorId, barrio_id: barrioId, tipo: 'identidad', estado: 'pendiente' },
       ])
     }
-
     setGuardando(false)
     setExito(true)
+    cargarJardineros()
   }
 
   if (exito) {
@@ -158,10 +228,35 @@ export default function JardineroOnboarding() {
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-8">
-      <h1 className="text-xl font-semibold text-gg-dark">Sumate como jardinero</h1>
+      <h1 className="text-xl font-semibold text-gg-dark">{editId ? 'Editá tu perfil' : 'Sumate como jardinero'}</h1>
       <p className="mb-6 text-sm text-gray-500">
-        Creá tu perfil gratis. No necesitás estar formalizado para empezar — eso es opcional.
+        {editId
+          ? 'Actualizá tus datos. Los cambios se reflejan en el directorio al instante.'
+          : 'Creá tu perfil gratis. No necesitás estar formalizado para empezar — eso es opcional.'}
       </p>
+
+      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white p-3">
+        <span className="text-sm text-gray-600">¿Ya tenés perfil?</span>
+        <select value={editId ?? ''} onChange={(e) => seleccionar(e.target.value)} className={inputClass + ' max-w-xs'}>
+          <option value="">— Crear perfil nuevo —</option>
+          {jardineros.map((j) => (
+            <option key={j.id} value={j.id}>
+              {nombreJardinero(j)}
+            </option>
+          ))}
+        </select>
+        {editId && (
+          <button type="button" onClick={reiniciar} className="text-sm font-medium text-gg-green hover:underline">
+            + Crear nuevo
+          </button>
+        )}
+      </div>
+
+      {okEditar && (
+        <div className="mb-6 rounded-lg border border-gg-light bg-gg-light/50 p-3 text-sm font-medium text-gg-dark">
+          ✓ Cambios guardados.
+        </div>
+      )}
 
       <form onSubmit={enviar} className="space-y-6">
         <fieldset className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
@@ -182,7 +277,7 @@ export default function JardineroOnboarding() {
           )}
           <div className="grid grid-cols-2 gap-3">
             <Campo label={esEmpresa ? 'Nombre del contacto *' : 'Nombre *'}>
-              <input className={inputClass} value={nombre} onChange={(e) => setNombre(e.target.value)} autoFocus />
+              <input className={inputClass} value={nombre} onChange={(e) => setNombre(e.target.value)} />
             </Campo>
             <Campo label="Apellido">
               <input className={inputClass} value={apellido} onChange={(e) => setApellido(e.target.value)} />
@@ -264,7 +359,7 @@ export default function JardineroOnboarding() {
             Formalización <span className="font-normal text-gray-400">(opcional)</span>
           </legend>
           <p className="text-xs text-gray-500">
-            No es obligatorio para empezar. Podés completarlo más adelante para acceder a más beneficios.
+            No es obligatorio para empezar. Podés completarlo cuando quieras para acceder a más beneficios.
           </p>
           <div className="grid grid-cols-2 gap-3">
             <Campo label="CUIT / CUIL">
@@ -282,24 +377,26 @@ export default function JardineroOnboarding() {
           </div>
         </fieldset>
 
-        <fieldset className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
-          <legend className="px-1 text-sm font-semibold text-gg-dark">¿Dónde querés trabajar?</legend>
-          <Campo label="Barrio (opcional)">
-            <select className={inputClass} value={barrioId} onChange={(e) => setBarrioId(e.target.value)}>
-              <option value="">Elegir más adelante</option>
-              {barrios.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.nombre}
-                </option>
-              ))}
-            </select>
-          </Campo>
-          {barrioId && (
-            <p className="text-xs text-gray-500">
-              Le vamos a pedir a la administración que valide tus documentos (antecedentes, seguro e identidad) para ese barrio.
-            </p>
-          )}
-        </fieldset>
+        {!editId && (
+          <fieldset className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
+            <legend className="px-1 text-sm font-semibold text-gg-dark">¿Dónde querés trabajar?</legend>
+            <Campo label="Barrio (opcional)">
+              <select className={inputClass} value={barrioId} onChange={(e) => setBarrioId(e.target.value)}>
+                <option value="">Elegir más adelante</option>
+                {barrios.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.nombre}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+            {barrioId && (
+              <p className="text-xs text-gray-500">
+                Le vamos a pedir a la administración que valide tus documentos (antecedentes, seguro e identidad) para ese barrio.
+              </p>
+            )}
+          </fieldset>
+        )}
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
@@ -308,7 +405,7 @@ export default function JardineroOnboarding() {
           disabled={guardando}
           className="w-full rounded-lg bg-gg-green px-4 py-3 text-sm font-medium text-white hover:bg-gg-dark disabled:opacity-60"
         >
-          {guardando ? 'Creando tu perfil…' : 'Crear mi perfil'}
+          {guardando ? 'Guardando…' : editId ? 'Guardar cambios' : 'Crear mi perfil'}
         </button>
       </form>
     </main>
