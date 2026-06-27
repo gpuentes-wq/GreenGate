@@ -30,3 +30,7 @@ create index if not exists idx_solicitud_prestador on solicitud(prestador_id);
 -- Modo piloto (sin login): lectura/escritura con la clave anon.
 alter table solicitud disable row level security;
 grant select, insert, update, delete on solicitud to anon, authenticated;
+
+-- Belt-and-suspenders: si RLS quedara activado igual, esta política permite el acceso.
+drop policy if exists piloto_solicitud on solicitud;
+create policy piloto_solicitud on solicitud for all to anon, authenticated using (true) with check (true);
