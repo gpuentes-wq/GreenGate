@@ -3,6 +3,7 @@ import { supabase } from './lib/supabase'
 import type { PrestadorDirectorio, Especialidad } from './types'
 import { servicioLabel } from './labels'
 import { Insignia, EmptyState } from './ui'
+import { ContactarModal } from './ContactarModal'
 
 type Extra = { tarifa: number | null; experiencia: number | null }
 
@@ -13,7 +14,8 @@ export default function PropietarioDirectorio() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [soloVerificados, setSoloVerificados] = useState(false)
-  const [contactados, setContactados] = useState<Record<string, boolean>>({})
+  const [enviados, setEnviados] = useState<Record<string, boolean>>({})
+  const [contactar, setContactar] = useState<{ id: string; nombre: string } | null>(null)
 
   useEffect(() => {
     async function cargar() {
@@ -159,13 +161,13 @@ export default function PropietarioDirectorio() {
                 </div>
 
                 <div className="mt-4">
-                  {contactados[p.id] ? (
+                  {enviados[p.id] ? (
                     <div className="rounded-lg bg-gg-light px-3 py-2 text-center text-sm font-medium text-gg-dark">
                       Solicitud enviada ✓
                     </div>
                   ) : (
                     <button
-                      onClick={() => setContactados((c) => ({ ...c, [p.id]: true }))}
+                      onClick={() => setContactar({ id: p.id, nombre })}
                       className="w-full rounded-lg bg-gg-green px-3 py-2 text-sm font-medium text-white transition hover:bg-gg-dark"
                     >
                       Contactar
@@ -176,6 +178,18 @@ export default function PropietarioDirectorio() {
             )
           })}
         </div>
+      )}
+
+      {contactar && (
+        <ContactarModal
+          prestadorId={contactar.id}
+          prestadorNombre={contactar.nombre}
+          onClose={() => setContactar(null)}
+          onEnviado={() => {
+            setEnviados((e) => ({ ...e, [contactar.id]: true }))
+            setContactar(null)
+          }}
+        />
       )}
     </main>
   )

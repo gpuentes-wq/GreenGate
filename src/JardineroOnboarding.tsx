@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { supabase } from './lib/supabase'
 import { Campo, inputClass } from './ui'
 import { servicioLabel } from './labels'
+import { SolicitudesPanel } from './SolicitudesPanel'
 
 const SERVICIOS = ['jardineria', 'poda', 'fumigacion', 'riego', 'diseno_paisajismo', 'limpieza_exterior', 'otro']
 
@@ -24,6 +25,7 @@ export default function JardineroOnboarding() {
   const [barrios, setBarrios] = useState<BarrioOpt[]>([])
   const [jardineros, setJardineros] = useState<PrestadorLite[]>([])
   const [editId, setEditId] = useState<string | null>(null)
+  const [seccion, setSeccion] = useState<'perfil' | 'solicitudes'>('perfil')
 
   const [esEmpresa, setEsEmpresa] = useState(false)
   const [nombre, setNombre] = useState('')
@@ -63,6 +65,7 @@ export default function JardineroOnboarding() {
 
   function reiniciar() {
     setEditId(null)
+    setSeccion('perfil')
     setEsEmpresa(false)
     setNombre('')
     setApellido('')
@@ -92,6 +95,7 @@ export default function JardineroOnboarding() {
     }
     setError(null)
     setOkEditar(false)
+    setSeccion('perfil')
     const [{ data: p }, { data: esp }] = await Promise.all([
       supabase.from('prestador').select('*').eq('id', id).single(),
       supabase.from('prestador_servicio').select('tipo').eq('prestador_id', id),
@@ -226,14 +230,17 @@ export default function JardineroOnboarding() {
     )
   }
 
+  const titulo = editId ? (seccion === 'solicitudes' ? 'Tus solicitudes' : 'Editá tu perfil') : 'Sumate como jardinero'
+  const subtitulo = editId
+    ? seccion === 'solicitudes'
+      ? 'Pedidos de contacto que te dejaron los propietarios.'
+      : 'Actualizá tus datos. Los cambios se reflejan en el directorio al instante.'
+    : 'Creá tu perfil gratis. No necesitás estar formalizado para empezar — eso es opcional.'
+
   return (
     <main className="mx-auto max-w-2xl px-6 py-8">
-      <h1 className="text-xl font-semibold text-gg-dark">{editId ? 'Editá tu perfil' : 'Sumate como jardinero'}</h1>
-      <p className="mb-6 text-sm text-gray-500">
-        {editId
-          ? 'Actualizá tus datos. Los cambios se reflejan en el directorio al instante.'
-          : 'Creá tu perfil gratis. No necesitás estar formalizado para empezar — eso es opcional.'}
-      </p>
+      <h1 className="text-xl font-semibold text-gg-dark">{titulo}</h1>
+      <p className="mb-6 text-sm text-gray-500">{subtitulo}</p>
 
       <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white p-3">
         <span className="text-sm text-gray-600">¿Ya tenés perfil?</span>
@@ -252,162 +259,194 @@ export default function JardineroOnboarding() {
         )}
       </div>
 
-      {okEditar && (
-        <div className="mb-6 rounded-lg border border-gg-light bg-gg-light/50 p-3 text-sm font-medium text-gg-dark">
-          ✓ Cambios guardados.
+      {editId && (
+        <div className="mb-6 flex gap-1 border-b border-gray-200">
+          <SubTab activo={seccion === 'perfil'} onClick={() => setSeccion('perfil')}>
+            Mi perfil
+          </SubTab>
+          <SubTab activo={seccion === 'solicitudes'} onClick={() => setSeccion('solicitudes')}>
+            Solicitudes
+          </SubTab>
         </div>
       )}
 
-      <form onSubmit={enviar} className="space-y-6">
-        <fieldset className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
-          <legend className="px-1 text-sm font-semibold text-gg-dark">Tus datos</legend>
-          <label className="flex items-center gap-2 text-sm text-gray-600">
-            <input
-              type="checkbox"
-              checked={esEmpresa}
-              onChange={(e) => setEsEmpresa(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300"
-            />
-            Soy una empresa
-          </label>
-          {esEmpresa && (
-            <Campo label="Razón social">
-              <input className={inputClass} value={razonSocial} onChange={(e) => setRazonSocial(e.target.value)} />
-            </Campo>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <Campo label={esEmpresa ? 'Nombre del contacto *' : 'Nombre *'}>
-              <input className={inputClass} value={nombre} onChange={(e) => setNombre(e.target.value)} />
-            </Campo>
-            <Campo label="Apellido">
-              <input className={inputClass} value={apellido} onChange={(e) => setApellido(e.target.value)} />
-            </Campo>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Campo label="Celular *">
-              <input className={inputClass} value={celular} onChange={(e) => setCelular(e.target.value)} placeholder="+54 9 11 ..." />
-            </Campo>
-            <Campo label="Email">
-              <input type="email" className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} />
-            </Campo>
-          </div>
-          <Campo label="Domicilio">
-            <input className={inputClass} value={domicilio} onChange={(e) => setDomicilio(e.target.value)} />
-          </Campo>
-        </fieldset>
-
-        <fieldset className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
-          <legend className="px-1 text-sm font-semibold text-gg-dark">Tu servicio</legend>
-          <Campo label="Servicio principal">
-            <select className={inputClass} value={servicioPrincipal} onChange={(e) => setServicioPrincipal(e.target.value)}>
-              {SERVICIOS.map((s) => (
-                <option key={s} value={s}>
-                  {servicioLabel(s)}
-                </option>
-              ))}
-            </select>
-          </Campo>
-          <div>
-            <span className="mb-1 block text-sm font-medium text-gray-700">Especialidades adicionales</span>
-            <div className="flex flex-wrap gap-2">
-              {SERVICIOS.filter((s) => s !== servicioPrincipal).map((s) => (
-                <button
-                  type="button"
-                  key={s}
-                  onClick={() => toggleEsp(s)}
-                  className={
-                    'rounded-full border px-3 py-1 text-sm transition ' +
-                    (especialidades.includes(s)
-                      ? 'border-gg-green bg-gg-light text-gg-dark'
-                      : 'border-gray-300 text-gray-600 hover:bg-gray-50')
-                  }
-                >
-                  {servicioLabel(s)}
-                </button>
-              ))}
+      {editId && seccion === 'solicitudes' ? (
+        <SolicitudesPanel prestadorId={editId} />
+      ) : (
+        <>
+          {okEditar && (
+            <div className="mb-6 rounded-lg border border-gg-light bg-gg-light/50 p-3 text-sm font-medium text-gg-dark">
+              ✓ Cambios guardados.
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Campo label="Zona preferente">
-              <input className={inputClass} value={zona} onChange={(e) => setZona(e.target.value)} />
-            </Campo>
-            <Campo label="Horario">
-              <input className={inputClass} value={horario} onChange={(e) => setHorario(e.target.value)} placeholder="Lun-Vie 8-17" />
-            </Campo>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Campo label="Años de experiencia">
-              <input type="number" min="0" className={inputClass} value={experiencia} onChange={(e) => setExperiencia(e.target.value)} />
-            </Campo>
-            <Campo label="Tarifa de referencia (ARS)">
-              <input type="number" min="0" className={inputClass} value={tarifa} onChange={(e) => setTarifa(e.target.value)} />
-            </Campo>
-          </div>
-          <Campo label="Presentación / bio">
-            <textarea
-              className={inputClass}
-              rows={3}
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
-              placeholder="Contá en qué te destacás..."
-            />
-          </Campo>
-        </fieldset>
+          )}
 
-        <fieldset className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
-          <legend className="px-1 text-sm font-semibold text-gg-dark">
-            Formalización <span className="font-normal text-gray-400">(opcional)</span>
-          </legend>
-          <p className="text-xs text-gray-500">
-            No es obligatorio para empezar. Podés completarlo cuando quieras para acceder a más beneficios.
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <Campo label="CUIT / CUIL">
-              <input className={inputClass} value={cuit} onChange={(e) => setCuit(e.target.value)} />
-            </Campo>
-            <Campo label="Condición fiscal">
-              <select className={inputClass} value={condicion} onChange={(e) => setCondicion(e.target.value)}>
-                {CONDICIONES.map((c) => (
-                  <option key={c.v} value={c.v}>
-                    {c.l}
-                  </option>
-                ))}
-              </select>
-            </Campo>
-          </div>
-        </fieldset>
+          <form onSubmit={enviar} className="space-y-6">
+            <fieldset className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
+              <legend className="px-1 text-sm font-semibold text-gg-dark">Tus datos</legend>
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={esEmpresa}
+                  onChange={(e) => setEsEmpresa(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                Soy una empresa
+              </label>
+              {esEmpresa && (
+                <Campo label="Razón social">
+                  <input className={inputClass} value={razonSocial} onChange={(e) => setRazonSocial(e.target.value)} />
+                </Campo>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <Campo label={esEmpresa ? 'Nombre del contacto *' : 'Nombre *'}>
+                  <input className={inputClass} value={nombre} onChange={(e) => setNombre(e.target.value)} />
+                </Campo>
+                <Campo label="Apellido">
+                  <input className={inputClass} value={apellido} onChange={(e) => setApellido(e.target.value)} />
+                </Campo>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Campo label="Celular *">
+                  <input className={inputClass} value={celular} onChange={(e) => setCelular(e.target.value)} placeholder="+54 9 11 ..." />
+                </Campo>
+                <Campo label="Email">
+                  <input type="email" className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} />
+                </Campo>
+              </div>
+              <Campo label="Domicilio">
+                <input className={inputClass} value={domicilio} onChange={(e) => setDomicilio(e.target.value)} />
+              </Campo>
+            </fieldset>
 
-        {!editId && (
-          <fieldset className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
-            <legend className="px-1 text-sm font-semibold text-gg-dark">¿Dónde querés trabajar?</legend>
-            <Campo label="Barrio (opcional)">
-              <select className={inputClass} value={barrioId} onChange={(e) => setBarrioId(e.target.value)}>
-                <option value="">Elegir más adelante</option>
-                {barrios.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.nombre}
-                  </option>
-                ))}
-              </select>
-            </Campo>
-            {barrioId && (
+            <fieldset className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
+              <legend className="px-1 text-sm font-semibold text-gg-dark">Tu servicio</legend>
+              <Campo label="Servicio principal">
+                <select className={inputClass} value={servicioPrincipal} onChange={(e) => setServicioPrincipal(e.target.value)}>
+                  {SERVICIOS.map((s) => (
+                    <option key={s} value={s}>
+                      {servicioLabel(s)}
+                    </option>
+                  ))}
+                </select>
+              </Campo>
+              <div>
+                <span className="mb-1 block text-sm font-medium text-gray-700">Especialidades adicionales</span>
+                <div className="flex flex-wrap gap-2">
+                  {SERVICIOS.filter((s) => s !== servicioPrincipal).map((s) => (
+                    <button
+                      type="button"
+                      key={s}
+                      onClick={() => toggleEsp(s)}
+                      className={
+                        'rounded-full border px-3 py-1 text-sm transition ' +
+                        (especialidades.includes(s)
+                          ? 'border-gg-green bg-gg-light text-gg-dark'
+                          : 'border-gray-300 text-gray-600 hover:bg-gray-50')
+                      }
+                    >
+                      {servicioLabel(s)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Campo label="Zona preferente">
+                  <input className={inputClass} value={zona} onChange={(e) => setZona(e.target.value)} />
+                </Campo>
+                <Campo label="Horario">
+                  <input className={inputClass} value={horario} onChange={(e) => setHorario(e.target.value)} placeholder="Lun-Vie 8-17" />
+                </Campo>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Campo label="Años de experiencia">
+                  <input type="number" min="0" className={inputClass} value={experiencia} onChange={(e) => setExperiencia(e.target.value)} />
+                </Campo>
+                <Campo label="Tarifa de referencia (ARS)">
+                  <input type="number" min="0" className={inputClass} value={tarifa} onChange={(e) => setTarifa(e.target.value)} />
+                </Campo>
+              </div>
+              <Campo label="Presentación / bio">
+                <textarea
+                  className={inputClass}
+                  rows={3}
+                  value={descripcion}
+                  onChange={(e) => setDescripcion(e.target.value)}
+                  placeholder="Contá en qué te destacás..."
+                />
+              </Campo>
+            </fieldset>
+
+            <fieldset className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
+              <legend className="px-1 text-sm font-semibold text-gg-dark">
+                Formalización <span className="font-normal text-gray-400">(opcional)</span>
+              </legend>
               <p className="text-xs text-gray-500">
-                Le vamos a pedir a la administración que valide tus documentos (antecedentes, seguro e identidad) para ese barrio.
+                No es obligatorio para empezar. Podés completarlo cuando quieras para acceder a más beneficios.
               </p>
+              <div className="grid grid-cols-2 gap-3">
+                <Campo label="CUIT / CUIL">
+                  <input className={inputClass} value={cuit} onChange={(e) => setCuit(e.target.value)} />
+                </Campo>
+                <Campo label="Condición fiscal">
+                  <select className={inputClass} value={condicion} onChange={(e) => setCondicion(e.target.value)}>
+                    {CONDICIONES.map((c) => (
+                      <option key={c.v} value={c.v}>
+                        {c.l}
+                      </option>
+                    ))}
+                  </select>
+                </Campo>
+              </div>
+            </fieldset>
+
+            {!editId && (
+              <fieldset className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
+                <legend className="px-1 text-sm font-semibold text-gg-dark">¿Dónde querés trabajar?</legend>
+                <Campo label="Barrio (opcional)">
+                  <select className={inputClass} value={barrioId} onChange={(e) => setBarrioId(e.target.value)}>
+                    <option value="">Elegir más adelante</option>
+                    {barrios.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </Campo>
+                {barrioId && (
+                  <p className="text-xs text-gray-500">
+                    Le vamos a pedir a la administración que valide tus documentos (antecedentes, seguro e identidad) para ese barrio.
+                  </p>
+                )}
+              </fieldset>
             )}
-          </fieldset>
-        )}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-red-600">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={guardando}
-          className="w-full rounded-lg bg-gg-green px-4 py-3 text-sm font-medium text-white hover:bg-gg-dark disabled:opacity-60"
-        >
-          {guardando ? 'Guardando…' : editId ? 'Guardar cambios' : 'Crear mi perfil'}
-        </button>
-      </form>
+            <button
+              type="submit"
+              disabled={guardando}
+              className="w-full rounded-lg bg-gg-green px-4 py-3 text-sm font-medium text-white hover:bg-gg-dark disabled:opacity-60"
+            >
+              {guardando ? 'Guardando…' : editId ? 'Guardar cambios' : 'Crear mi perfil'}
+            </button>
+          </form>
+        </>
+      )}
     </main>
+  )
+}
+
+function SubTab({ activo, onClick, children }: { activo: boolean; onClick: () => void; children: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        '-mb-px border-b-2 px-4 py-2 text-sm font-medium transition ' +
+        (activo ? 'border-gg-green text-gg-dark' : 'border-transparent text-gray-500 hover:text-gray-700')
+      }
+    >
+      {children}
+    </button>
   )
 }

@@ -32,6 +32,7 @@ create type frecuencia_servicio  as enum ('unico', 'semanal', 'quincenal', 'mens
 create type estado_pago          as enum ('pendiente', 'pagado', 'parcial');
 create type medio_ingreso        as enum ('peatonal', 'vehiculo');
 create type estado_moderacion    as enum ('publicada', 'oculta', 'reportada');
+create type estado_solicitud     as enum ('pendiente', 'aceptada', 'rechazada');
 
 -- ════════════════════════════════════════════════════════════════════════
 -- ENTIDADES
@@ -245,6 +246,20 @@ create table ingreso (
   created_at     timestamptz not null default now()
 );
 
+-- ── SOLICITUD ── Pedido de contacto de un propietario a un prestador.
+--    Cierra el círculo del marketplace (el prestador la ve en su buzón).
+create table solicitud (
+  id               uuid primary key default gen_random_uuid(),
+  prestador_id     uuid not null references prestador(id) on delete cascade,
+  propietario_id   uuid references propietario(id) on delete set null,
+  barrio_id        uuid references barrio(id) on delete set null,
+  contacto_nombre  text,
+  contacto_celular text,
+  mensaje          text,
+  estado           estado_solicitud not null default 'pendiente',
+  created_at       timestamptz not null default now()
+);
+
 -- ── PERFIL ── Vincula un usuario de Supabase Auth con su rol y su alcance.
 --    Es la base para el login y para la seguridad por barrio (ver policies.sql).
 --    NOTA: el vínculo propietario/prestador ↔ login vive acá (no duplicado en cada tabla).
@@ -314,3 +329,4 @@ create index on trabajo(lote_id);
 create index on valoracion(prestador_id);
 create index on prestador_barrio(barrio_id);
 create index on ingreso(prestador_id);
+create index on solicitud(prestador_id);

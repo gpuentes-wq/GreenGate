@@ -14,7 +14,7 @@ declare t text;
 begin
   foreach t in array array['administracion','barrio','propietario','lote','prestador',
                            'prestador_servicio','prestador_barrio','prestador_foto',
-                           'verificacion','trabajo','valoracion','ingreso','perfil'] loop
+                           'verificacion','trabajo','valoracion','ingreso','solicitud','perfil'] loop
     execute format('alter table %I disable row level security;', t);
   end loop;
 end $$;
