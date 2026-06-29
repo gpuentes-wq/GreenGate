@@ -1,13 +1,23 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from './lib/supabase'
 import type { Barrio, PrestadorDirectorio } from './types'
 import { Insignia, EmptyState } from './ui'
 import { AltaBarrioModal } from './AltaBarrioModal'
 import { ValidarPrestadorModal } from './ValidarPrestadorModal'
 
+const TIPO_LABELS: Record<string, string> = {
+  antecedentes_penales: 'Antecedentes',
+  seguro_art: 'Seguro / ART',
+  identidad: 'Identidad',
+}
+
+type Verif = { id: string; tipo: string; estado: string; fecha_vencimiento: string | null; prestador_id: string }
+type Alerta = { id: string; prestador_id: string; nombre: string; tipo: string; texto: string; vencido: boolean }
+
 export default function AdminPanel() {
   const [barrios, setBarrios] = useState<Barrio[]>([])
   const [prestadores, setPrestadores] = useState<PrestadorDirectorio[]>([])
+  const [verificaciones, setVerificaciones] = useState<Verif[]>([])
   const [administracionId, setAdministracionId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -16,7 +26,7 @@ export default function AdminPanel() {
 
   const cargar = useCallback(async () => {
     setError(null)
-    const [b, p, a] = await Promise.all([
+    const [b, p, a, v] = await Promise.all([
       supabase
         .from('barrio')
         .select('id,nombre,localidad,zona,cantidad_lotes,etapa_activacion')
@@ -26,6 +36,7 @@ export default function AdminPanel() {
         .select('*')
         .order('puntaje_promedio', { ascending: false, nullsFirst: false }),
       supabase.from('administracion').select('id').limit(1),
+      supabase.from('verificacion').select('id,tipo,estado,fecha_vencimiento,prestador_id'),
     ])
     if (b.error) {
       setError(b.error.message)
@@ -37,6 +48,7 @@ export default function AdminPanel() {
     }
     setBarrios((b.data as Barrio[]) ?? [])
     setPrestadores((p.data as PrestadorDirectorio[]) ?? [])
+    setVerificaciones((v.data as Verif[]) ?? [])
     const adm = (a.data as Array<{ id: string }>) ?? []
     if (adm.length > 0) setAdministracionId(adm[0].id)
   }, [])
@@ -49,6 +61,40 @@ export default function AdminPanel() {
   const pendientes = prestadores.filter(
     (p) => !(p.antecedentes_ok && p.seguro_ok && p.identidad_ok),
   ).length
+
+  const alertas = useMemo<Alerta[]>(() => {
+    const hoy = new Date()
+    const nombrePorId = new Map(prestadores.map((p) => [p.id, nombreMostrar(p)]))
+    const out: Alerta[] = []
+    for (const v of verificaciones) {
+      let texto: string | null = null
+      let vencido = false
+      if (v.estado === 'vencido') {
+        texto = 'vencido'
+        vencido = true
+      } else if (v.fecha_vencimiento) {
+        const fv = new Date(v.fecha_vencimiento + 'T00:00:00')
+        const dias = Math.ceil((fv.getTime() - hoy.getTime()) / 86400000)
+        if (dias < 0) {
+          texto = `vencido hace ${-dias} días`
+          vencido = true
+        } else if (dias <= 30) {
+          texto = `vence en ${dias} día${dias === 1 ? '' : 's'}`
+        }
+      }
+      if (texto) {
+        out.push({
+          id: v.id,
+          prestador_id: v.prestador_id,
+          nombre: nombrePorId.get(v.prestador_id) ?? 'Prestador',
+          tipo: v.tipo,
+          texto,
+          vencido,
+        })
+      }
+    }
+    return out.sort((a, b) => Number(b.vencido) - Number(a.vencido))
+  }, [verificaciones, prestadores])
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
@@ -70,6 +116,37 @@ export default function AdminPanel() {
         <Tarjeta titulo="Prestadores" valor={prestadores.length} />
         <Tarjeta titulo="Pendientes de validación" valor={pendientes} acento />
       </section>
+
+      {alertas.length > 0 && (
+        <section className="mb-8 rounded-lg border border-amber-300 bg-amber-50 p-4">
+          <h2 className="mb-3 text-sm font-semibold text-amber-800">
+            ⏰ Documentación que requiere atención ({alertas.length})
+          </h2>
+          <ul className="space-y-2">
+            {alertas.map((a) => (
+              <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span className="text-amber-900">
+                  <span
+                    className={
+                      'mr-2 inline-block rounded px-1.5 py-0.5 text-xs font-semibold ' +
+                      (a.vencido ? 'bg-red-100 text-red-700' : 'bg-amber-200 text-amber-900')
+                    }
+                  >
+                    {a.vencido ? 'VENCIDO' : 'POR VENCER'}
+                  </span>
+                  <strong>{a.nombre}</strong> — {TIPO_LABELS[a.tipo] ?? a.tipo} {a.texto}
+                </span>
+                <button
+                  onClick={() => setValidar({ id: a.prestador_id, nombre: a.nombre })}
+                  className="shrink-0 rounded-lg border border-amber-400 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                >
+                  Revisar
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {error && (
         <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-700">

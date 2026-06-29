@@ -58,9 +58,9 @@ insert into prestador_barrio (prestador_id, barrio_id, habilitado, fecha_habilit
 
 -- Portfolio de fotos (trabajos anteriores)
 insert into prestador_foto (prestador_id, url, descripcion, orden) values
-  ('e0000000-0000-0000-0000-000000000001', 'https://ejemplo.greengate.app/fotos/roberto-1.jpg', 'Jardín del lote A-12 mantenido', 1),
-  ('e0000000-0000-0000-0000-000000000001', 'https://ejemplo.greengate.app/fotos/roberto-2.jpg', 'Poda de arbustos', 2),
-  ('e0000000-0000-0000-0000-000000000002', 'https://ejemplo.greengate.app/fotos/diego-1.jpg', 'Diseño de cantero con riego', 1);
+  ('e0000000-0000-0000-0000-000000000001', 'https://picsum.photos/seed/greengate1/600/400', 'Jardín del lote A-12 mantenido', 1),
+  ('e0000000-0000-0000-0000-000000000001', 'https://picsum.photos/seed/greengate2/600/400', 'Poda de arbustos', 2),
+  ('e0000000-0000-0000-0000-000000000002', 'https://picsum.photos/seed/greengate3/600/400', 'Diseño de cantero con riego', 1);
 
 -- ── Verificaciones (SOLO ESTADO; cada prestador en su barrio) ──
 insert into verificacion (prestador_id, barrio_id, tipo, estado, fecha_emision, fecha_vencimiento, aseguradora, nro_poliza, validado_por, validado_en) values

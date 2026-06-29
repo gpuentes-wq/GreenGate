@@ -11,6 +11,7 @@ export default function PropietarioDirectorio() {
   const [prestadores, setPrestadores] = useState<PrestadorDirectorio[]>([])
   const [especialidades, setEspecialidades] = useState<Especialidad[]>([])
   const [extras, setExtras] = useState<Record<string, Extra>>({})
+  const [fotos, setFotos] = useState<Record<string, string[]>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [soloVerificados, setSoloVerificados] = useState(false)
@@ -21,10 +22,11 @@ export default function PropietarioDirectorio() {
     async function cargar() {
       setLoading(true)
       setError(null)
-      const [p, e, x] = await Promise.all([
+      const [p, e, x, f] = await Promise.all([
         supabase.from('prestador_directorio').select('*'),
         supabase.from('prestador_servicio').select('prestador_id,tipo,tarifa'),
         supabase.from('prestador').select('id,tarifa_referencia,anios_experiencia'),
+        supabase.from('prestador_foto').select('prestador_id,url,orden').order('orden'),
       ])
       const err = p.error || e.error || x.error
       if (err) {
@@ -38,6 +40,13 @@ export default function PropietarioDirectorio() {
       const filas = (x.data as Array<{ id: string; tarifa_referencia: number | null; anios_experiencia: number | null }>) ?? []
       for (const r of filas) map[r.id] = { tarifa: r.tarifa_referencia, experiencia: r.anios_experiencia }
       setExtras(map)
+      const fmap: Record<string, string[]> = {}
+      const frows = (f.data as Array<{ prestador_id: string; url: string; orden: number }>) ?? []
+      for (const r of frows) {
+        if (!fmap[r.prestador_id]) fmap[r.prestador_id] = []
+        fmap[r.prestador_id].push(r.url)
+      }
+      setFotos(fmap)
       setLoading(false)
     }
     cargar()
@@ -97,6 +106,7 @@ export default function PropietarioDirectorio() {
             const verificado = p.antecedentes_ok && p.seguro_ok && p.identidad_ok
             const esp = espPorPrestador[p.id] ?? []
             const ex = extras[p.id]
+            const fotosP = fotos[p.id] ?? []
             return (
               <div key={p.id} className="flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-2">
@@ -134,6 +144,23 @@ export default function PropietarioDirectorio() {
                       <span key={t} className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
                         {servicioLabel(t)}
                       </span>
+                    ))}
+                  </div>
+                )}
+
+                {fotosP.length > 0 && (
+                  <div className="mt-3 flex gap-2 overflow-x-auto">
+                    {fotosP.map((url, i) => (
+                      <img
+                        key={i}
+                        src={url}
+                        alt="Trabajo anterior"
+                        loading="lazy"
+                        onError={(ev) => {
+                          ev.currentTarget.style.display = 'none'
+                        }}
+                        className="h-16 w-24 shrink-0 rounded-lg object-cover"
+                      />
                     ))}
                   </div>
                 )}
