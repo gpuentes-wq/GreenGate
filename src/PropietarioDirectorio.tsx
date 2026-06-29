@@ -17,6 +17,7 @@ export default function PropietarioDirectorio() {
   const [soloVerificados, setSoloVerificados] = useState(false)
   const [enviados, setEnviados] = useState<Record<string, boolean>>({})
   const [contactar, setContactar] = useState<{ id: string; nombre: string } | null>(null)
+  const [lightbox, setLightbox] = useState<{ fotos: string[]; i: number } | null>(null)
 
   useEffect(() => {
     async function cargar() {
@@ -156,10 +157,11 @@ export default function PropietarioDirectorio() {
                         src={url}
                         alt="Trabajo anterior"
                         loading="lazy"
+                        onClick={() => setLightbox({ fotos: fotosP, i })}
                         onError={(ev) => {
                           ev.currentTarget.style.display = 'none'
                         }}
-                        className="h-16 w-24 shrink-0 rounded-lg object-cover"
+                        className="h-16 w-24 shrink-0 cursor-pointer rounded-lg object-cover transition hover:opacity-80"
                       />
                     ))}
                   </div>
@@ -218,6 +220,87 @@ export default function PropietarioDirectorio() {
           }}
         />
       )}
+
+      {lightbox && (
+        <Lightbox
+          fotos={lightbox.fotos}
+          i={lightbox.i}
+          onClose={() => setLightbox(null)}
+          onIndex={(i) => setLightbox((lb) => (lb ? { fotos: lb.fotos, i } : null))}
+        />
+      )}
     </main>
+  )
+}
+
+function Lightbox({
+  fotos,
+  i,
+  onClose,
+  onIndex,
+}: {
+  fotos: string[]
+  i: number
+  onClose: () => void
+  onIndex: (i: number) => void
+}) {
+  const prev = () => onIndex((i - 1 + fotos.length) % fotos.length)
+  const next = () => onIndex((i + 1) % fotos.length)
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+      else if (e.key === 'ArrowLeft' && fotos.length > 1) prev()
+      else if (e.key === 'ArrowRight' && fotos.length > 1) next()
+    }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  })
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
+      <button
+        onClick={onClose}
+        aria-label="Cerrar"
+        className="absolute right-4 top-4 text-3xl leading-none text-white/80 hover:text-white"
+      >
+        ✕
+      </button>
+      {fotos.length > 1 && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            prev()
+          }}
+          aria-label="Anterior"
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-4xl text-white/80 hover:text-white"
+        >
+          ‹
+        </button>
+      )}
+      <img
+        src={fotos[i]}
+        alt="Trabajo anterior"
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain shadow-2xl"
+      />
+      {fotos.length > 1 && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            next()
+          }}
+          aria-label="Siguiente"
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-4xl text-white/80 hover:text-white"
+        >
+          ›
+        </button>
+      )}
+      {fotos.length > 1 && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-white/70">
+          {i + 1} / {fotos.length}
+        </div>
+      )}
+    </div>
   )
 }
