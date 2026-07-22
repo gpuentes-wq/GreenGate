@@ -1,20 +1,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import { Modal } from './ui'
+import { ESTADOS_DECISION, estadoVerificacion, ESTADO_LABEL, ESTADO_COLOR } from './verificacion'
 
 const TIPO_LABELS: Record<string, string> = {
   antecedentes_penales: 'Antecedentes penales',
   seguro_art: 'Seguro / ART',
   identidad: 'Identidad',
-}
-
-const ESTADOS = ['pendiente', 'verificado', 'vencido', 'rechazado']
-
-const ESTADO_COLOR: Record<string, string> = {
-  verificado: 'text-gg-dark',
-  pendiente: 'text-amber-600',
-  vencido: 'text-red-600',
-  rechazado: 'text-red-600',
 }
 
 type Verif = { id: string; tipo: string; estado: string; fecha_vencimiento: string | null }
@@ -50,11 +42,11 @@ export function ValidarPrestadorModal({
     cargar()
   }, [prestadorId])
 
-  async function cambiar(id: string, estado: string) {
-    setVerifs((vs) => vs.map((v) => (v.id === id ? { ...v, estado } : v)))
+  async function guardar(id: string, cambios: Partial<Verif>) {
+    setVerifs((vs) => vs.map((v) => (v.id === id ? { ...v, ...cambios } : v)))
     const { error } = await supabase
       .from('verificacion')
-      .update({ estado, validado_por: administracionId, validado_en: new Date().toISOString() })
+      .update({ ...cambios, validado_por: administracionId, validado_en: new Date().toISOString() })
       .eq('id', id)
     if (error) setError(error.message)
     else onCambio()
@@ -70,34 +62,49 @@ export function ValidarPrestadorModal({
         <p className="text-sm text-gray-500">Este prestador no tiene verificaciones cargadas.</p>
       ) : (
         <div className="space-y-3">
-          <p className="text-sm text-gray-500">Cambiá el estado de cada documento. Se guarda al instante.</p>
-          {verifs.map((v) => (
-            <div
-              key={v.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3"
-            >
-              <div>
-                <div className="text-sm font-medium text-gray-800">{TIPO_LABELS[v.tipo] ?? v.tipo}</div>
-                {v.fecha_vencimiento && (
-                  <div className="text-xs text-gray-400">Vence: {v.fecha_vencimiento}</div>
-                )}
+          <p className="text-sm text-gray-500">
+            Elegí tu <strong>decisión</strong> y la <strong>fecha de vencimiento</strong>. El estado
+            (Vigente / Vencido) se calcula solo a partir de la fecha — no se elige a mano.
+          </p>
+          {verifs.map((v) => {
+            const efectivo = estadoVerificacion(v.estado, v.fecha_vencimiento)
+            const decision = v.estado === 'vencido' ? 'verificado' : v.estado
+            return (
+              <div key={v.id} className="rounded-lg border border-gray-200 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium text-gray-800">{TIPO_LABELS[v.tipo] ?? v.tipo}</div>
+                  <span className={'text-xs font-semibold ' + ESTADO_COLOR[efectivo]}>
+                    {ESTADO_LABEL[efectivo]}
+                  </span>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  <label className="block text-xs text-gray-500">
+                    Decisión
+                    <select
+                      value={decision}
+                      onChange={(e) => guardar(v.id, { estado: e.target.value })}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1 text-sm capitalize"
+                    >
+                      {ESTADOS_DECISION.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-xs text-gray-500">
+                    Vence (opcional)
+                    <input
+                      type="date"
+                      value={v.fecha_vencimiento ?? ''}
+                      onChange={(e) => guardar(v.id, { fecha_vencimiento: e.target.value || null })}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1 text-sm"
+                    />
+                  </label>
+                </div>
               </div>
-              <select
-                value={v.estado}
-                onChange={(e) => cambiar(v.id, e.target.value)}
-                className={
-                  'rounded-lg border border-gray-300 px-2 py-1 text-sm font-medium capitalize ' +
-                  (ESTADO_COLOR[v.estado] ?? '')
-                }
-              >
-                {ESTADOS.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

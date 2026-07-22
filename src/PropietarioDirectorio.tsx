@@ -4,6 +4,7 @@ import type { PrestadorDirectorio, Especialidad } from './types'
 import { servicioLabel } from './labels'
 import { Insignia, EmptyState } from './ui'
 import { ContactarModal } from './ContactarModal'
+import { badgesPrestador, prestadorVerificado, type VerificacionRow } from './verificacion'
 
 type Extra = { tarifa: number | null; experiencia: number | null }
 
@@ -12,6 +13,7 @@ export default function PropietarioDirectorio() {
   const [especialidades, setEspecialidades] = useState<Especialidad[]>([])
   const [extras, setExtras] = useState<Record<string, Extra>>({})
   const [fotos, setFotos] = useState<Record<string, string[]>>({})
+  const [verifs, setVerifs] = useState<Record<string, VerificacionRow[]>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [soloVerificados, setSoloVerificados] = useState(false)
@@ -23,13 +25,14 @@ export default function PropietarioDirectorio() {
     async function cargar() {
       setLoading(true)
       setError(null)
-      const [p, e, x, f] = await Promise.all([
+      const [p, e, x, f, v] = await Promise.all([
         supabase.from('prestador_directorio').select('*'),
         supabase.from('prestador_servicio').select('prestador_id,tipo,tarifa'),
         supabase.from('prestador').select('id,tarifa_referencia,anios_experiencia'),
         supabase.from('prestador_foto').select('prestador_id,url,orden').order('orden'),
+        supabase.from('verificacion').select('prestador_id,tipo,estado,fecha_vencimiento'),
       ])
-      const err = p.error || e.error || x.error
+      const err = p.error || e.error || x.error || v.error
       if (err) {
         setError(err.message)
         setLoading(false)
@@ -48,6 +51,13 @@ export default function PropietarioDirectorio() {
         fmap[r.prestador_id].push(r.url)
       }
       setFotos(fmap)
+      const vmap: Record<string, VerificacionRow[]> = {}
+      const vrows = (v.data as Array<{ prestador_id: string } & VerificacionRow>) ?? []
+      for (const r of vrows) {
+        if (!vmap[r.prestador_id]) vmap[r.prestador_id] = []
+        vmap[r.prestador_id].push({ tipo: r.tipo, estado: r.estado, fecha_vencimiento: r.fecha_vencimiento })
+      }
+      setVerifs(vmap)
       setLoading(false)
     }
     cargar()
@@ -65,10 +75,10 @@ export default function PropietarioDirectorio() {
   const lista = useMemo(() => {
     let l = [...prestadores]
     if (soloVerificados) {
-      l = l.filter((p) => p.antecedentes_ok && p.seguro_ok && p.identidad_ok)
+      l = l.filter((p) => prestadorVerificado(verifs[p.id] ?? []))
     }
     return l.sort((a, b) => (b.puntaje_promedio ?? -1) - (a.puntaje_promedio ?? -1))
-  }, [prestadores, soloVerificados])
+  }, [prestadores, soloVerificados, verifs])
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
@@ -104,7 +114,8 @@ export default function PropietarioDirectorio() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {lista.map((p) => {
             const nombre = p.es_empresa && p.razon_social ? p.razon_social : `${p.nombre}${p.apellido ? ' ' + p.apellido : ''}`
-            const verificado = p.antecedentes_ok && p.seguro_ok && p.identidad_ok
+            const badges = badgesPrestador(verifs[p.id] ?? [])
+            const verificado = badges.antecedentes && badges.seguro && badges.identidad
             const esp = espPorPrestador[p.id] ?? []
             const ex = extras[p.id]
             const fotosP = fotos[p.id] ?? []
@@ -184,9 +195,9 @@ export default function PropietarioDirectorio() {
                 )}
 
                 <div className="mt-3 flex flex-wrap gap-1">
-                  <Insignia ok={p.antecedentes_ok} label="Antecedentes" />
-                  <Insignia ok={p.seguro_ok} label="Seguro" />
-                  <Insignia ok={p.identidad_ok} label="Identidad" />
+                  <Insignia ok={badges.antecedentes} label="Antecedentes" />
+                  <Insignia ok={badges.seguro} label="Seguro" />
+                  <Insignia ok={badges.identidad} label="Identidad" />
                 </div>
 
                 <div className="mt-4">

@@ -3,6 +3,7 @@ import { supabase } from './lib/supabase'
 import { Campo, inputClass } from './ui'
 import { servicioLabel } from './labels'
 import { SolicitudesPanel } from './SolicitudesPanel'
+import { VerificacionesResumen } from './VerificacionesResumen'
 
 const SERVICIOS = ['jardineria', 'poda', 'fumigacion', 'riego', 'diseno_paisajismo', 'limpieza_exterior', 'otro']
 
@@ -274,6 +275,8 @@ export default function JardineroOnboarding() {
         <SolicitudesPanel prestadorId={editId} />
       ) : (
         <>
+          {editId && <VerificacionesResumen prestadorId={editId} />}
+
           {okEditar && (
             <div className="mb-6 rounded-lg border border-gg-light bg-gg-light/50 p-3 text-sm font-medium text-gg-dark">
               ✓ Cambios guardados.

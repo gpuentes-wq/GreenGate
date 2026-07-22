@@ -4,6 +4,7 @@ import type { Barrio, PrestadorDirectorio } from './types'
 import { Insignia, EmptyState } from './ui'
 import { AltaBarrioModal } from './AltaBarrioModal'
 import { ValidarPrestadorModal } from './ValidarPrestadorModal'
+import { alertaVencimiento, badgesPrestador, prestadorVerificado, type VerificacionRow } from './verificacion'
 
 const TIPO_LABELS: Record<string, string> = {
   antecedentes_penales: 'Antecedentes',
@@ -11,7 +12,7 @@ const TIPO_LABELS: Record<string, string> = {
   identidad: 'Identidad',
 }
 
-type Verif = { id: string; tipo: string; estado: string; fecha_vencimiento: string | null; prestador_id: string }
+type Verif = VerificacionRow & { id: string; prestador_id: string }
 type Alerta = { id: string; prestador_id: string; nombre: string; tipo: string; texto: string; vencido: boolean }
 
 export default function AdminPanel() {
@@ -58,38 +59,30 @@ export default function AdminPanel() {
     cargar().finally(() => setLoading(false))
   }, [cargar])
 
-  const pendientes = prestadores.filter(
-    (p) => !(p.antecedentes_ok && p.seguro_ok && p.identidad_ok),
-  ).length
+  const verifsPorPrestador = useMemo(() => {
+    const m: Record<string, Verif[]> = {}
+    for (const v of verificaciones) {
+      if (!m[v.prestador_id]) m[v.prestador_id] = []
+      m[v.prestador_id].push(v)
+    }
+    return m
+  }, [verificaciones])
+
+  const pendientes = prestadores.filter((p) => !prestadorVerificado(verifsPorPrestador[p.id] ?? [])).length
 
   const alertas = useMemo<Alerta[]>(() => {
-    const hoy = new Date()
     const nombrePorId = new Map(prestadores.map((p) => [p.id, nombreMostrar(p)]))
     const out: Alerta[] = []
     for (const v of verificaciones) {
-      let texto: string | null = null
-      let vencido = false
-      if (v.estado === 'vencido') {
-        texto = 'vencido'
-        vencido = true
-      } else if (v.fecha_vencimiento) {
-        const fv = new Date(v.fecha_vencimiento + 'T00:00:00')
-        const dias = Math.ceil((fv.getTime() - hoy.getTime()) / 86400000)
-        if (dias < 0) {
-          texto = `vencido hace ${-dias} días`
-          vencido = true
-        } else if (dias <= 30) {
-          texto = `vence en ${dias} día${dias === 1 ? '' : 's'}`
-        }
-      }
-      if (texto) {
+      const al = alertaVencimiento(v.estado, v.fecha_vencimiento)
+      if (al) {
         out.push({
           id: v.id,
           prestador_id: v.prestador_id,
           nombre: nombrePorId.get(v.prestador_id) ?? 'Prestador',
           tipo: v.tipo,
-          texto,
-          vencido,
+          texto: al.texto,
+          vencido: al.vencido,
         })
       }
     }
@@ -209,32 +202,35 @@ export default function AdminPanel() {
                     </tr>
                   </thead>
                   <tbody>
-                    {prestadores.map((p) => (
-                      <tr key={p.id} className="border-t border-gray-100">
-                        <td className="px-4 py-2 font-medium text-gray-800">{nombreMostrar(p)}</td>
-                        <td className="px-4 py-2 text-gray-600">{p.tipo_servicio_principal}</td>
-                        <td className="px-4 py-2 text-gray-600">
-                          {p.puntaje_promedio != null
-                            ? `★ ${p.puntaje_promedio} (${p.cantidad_valoraciones})`
-                            : '—'}
-                        </td>
-                        <td className="px-4 py-2">
-                          <div className="flex flex-wrap gap-1">
-                            <Insignia ok={p.antecedentes_ok} label="Antecedentes" />
-                            <Insignia ok={p.seguro_ok} label="Seguro" />
-                            <Insignia ok={p.identidad_ok} label="Identidad" />
-                          </div>
-                        </td>
-                        <td className="px-4 py-2 text-right">
-                          <button
-                            onClick={() => setValidar({ id: p.id, nombre: nombreMostrar(p) })}
-                            className="rounded-lg border border-gg-green px-3 py-1 text-sm font-medium text-gg-green hover:bg-gg-light"
-                          >
-                            Validar
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {prestadores.map((p) => {
+                      const b = badgesPrestador(verifsPorPrestador[p.id] ?? [])
+                      return (
+                        <tr key={p.id} className="border-t border-gray-100">
+                          <td className="px-4 py-2 font-medium text-gray-800">{nombreMostrar(p)}</td>
+                          <td className="px-4 py-2 text-gray-600">{p.tipo_servicio_principal}</td>
+                          <td className="px-4 py-2 text-gray-600">
+                            {p.puntaje_promedio != null
+                              ? `★ ${p.puntaje_promedio} (${p.cantidad_valoraciones})`
+                              : '—'}
+                          </td>
+                          <td className="px-4 py-2">
+                            <div className="flex flex-wrap gap-1">
+                              <Insignia ok={b.antecedentes} label="Antecedentes" />
+                              <Insignia ok={b.seguro} label="Seguro" />
+                              <Insignia ok={b.identidad} label="Identidad" />
+                            </div>
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            <button
+                              onClick={() => setValidar({ id: p.id, nombre: nombreMostrar(p) })}
+                              className="rounded-lg border border-gg-green px-3 py-1 text-sm font-medium text-gg-green hover:bg-gg-light"
+                            >
+                              Validar
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
