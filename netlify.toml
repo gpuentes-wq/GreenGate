@@ -1,6 +1,8 @@
 # Configuración de despliegue en Netlify para una SPA de Vite.
 [build]
-  command = "npm run build"
+  # El segundo comando copia landing/ (HTML estático, ajeno a Vite) dentro
+  # de dist/ tal cual, sin que Vite lo procese ni lo transforme.
+  command = "npm run build && cp -r landing dist/landing"
   publish = "dist"
 
 # Redirección para que el ruteo del lado del cliente funcione (SPA).

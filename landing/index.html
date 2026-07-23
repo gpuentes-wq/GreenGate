@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GreenGate — Jardinería profesional para barrios privados</title>
+<meta name="description" content="GreenGate profesionaliza el servicio de jardinería dentro de barrios privados: proveedores validados, trabajos trazables y reputación visible.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --verde-profundo:#2D5A27;
+  --verde-senal:#7AB648;
+  --fondo:#F5F7F2;
+  --blanco:#FFFFFF;
+  --carbon:#161A15;
+  --gris:#6B7469;
+  --borde:#DDE4D8;
+  --verde-oscuro:#1C3A18;
+  --max:1120px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--fondo);color:var(--carbon);
+  line-height:1.6;-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+.mono{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* ---------- tipografía ---------- */
+h1,h2,h3{letter-spacing:-.025em;line-height:1.12;font-weight:700}
+h1{font-size:clamp(2.1rem,5.6vw,3.9rem);font-weight:800;letter-spacing:-.035em}
+h2{font-size:clamp(1.7rem,3.8vw,2.7rem)}
+h3{font-size:1.15rem;line-height:1.35}
+.eyebrow{
+  font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:500;
+  text-transform:uppercase;letter-spacing:.16em;color:var(--verde-profundo);
+  display:block;margin-bottom:18px;
+}
+.eyebrow.claro{color:var(--verde-senal)}
+.lead{font-size:clamp(1.02rem,2vw,1.18rem);color:var(--gris);max-width:60ch}
+
+/* ---------- nav ---------- */
+nav{
+  position:sticky;top:0;z-index:50;background:rgba(245,247,242,.88);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--borde);
+}
+.nav-in{max-width:var(--max);margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:28px}
+.logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:1.08rem;letter-spacing:-.02em;color:var(--carbon);text-decoration:none}
+.logo-mark{
+  width:26px;height:26px;border-radius:7px;background:var(--verde-profundo);
+  display:grid;place-items:center;flex:0 0 auto;
+}
+.logo-mark span{width:9px;height:9px;border-radius:50%;background:var(--verde-senal);display:block}
+.nav-links{margin-left:auto;display:flex;gap:26px;align-items:center}
+.nav-links a{color:var(--gris);text-decoration:none;font-size:.9rem;font-weight:500}
+.nav-links a:hover{color:var(--verde-profundo)}
+@media(max-width:820px){.nav-links a:not(.btn-sm){display:none}}
+.btn-sm{
+  background:var(--verde-profundo);color:#fff!important;padding:9px 16px;
+  border-radius:8px;font-size:.85rem;font-weight:600;
+}
+.btn-sm:hover{background:var(--verde-oscuro)}
+
+/* ---------- botones ---------- */
+.btn{
+  display:inline-block;padding:15px 28px;border-radius:10px;font-weight:600;
+  font-size:.98rem;text-decoration:none;transition:transform .15s ease,background .15s ease;
+}
+.btn:active{transform:translateY(1px)}
+.btn-primario{background:var(--verde-profundo);color:#fff}
+.btn-primario:hover{background:var(--verde-oscuro)}
+.btn-senal{background:var(--verde-senal);color:var(--verde-oscuro)}
+.btn-senal:hover{background:#8DC85A}
+.btn-ghost{border:1.5px solid var(--borde);color:var(--carbon);background:transparent}
+.btn-ghost:hover{border-color:var(--verde-profundo)}
+.btn-ghost-claro{border:1.5px solid rgba(255,255,255,.35);color:#fff;background:transparent}
+.btn-ghost-claro:hover{border-color:#fff}
+a:focus-visible,button:focus-visible{outline:3px solid var(--verde-senal);outline-offset:3px}
+
+/* ---------- secciones ---------- */
+section{padding:88px 0}
+@media(max-width:700px){section{padding:60px 0}}
+.sec-oscura{background:var(--verde-profundo);color:#fff}
+.sec-oscura .lead{color:rgba(255,255,255,.72)}
+.sec-blanca{background:var(--blanco)}
+
+/* ---------- hero ---------- */
+.hero{padding:76px 0 84px;border-bottom:1px solid var(--borde)}
+.hero .tag{
+  display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.72rem;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--verde-profundo);
+  border:1px solid var(--borde);background:var(--blanco);
+  padding:6px 12px;border-radius:100px;margin-bottom:26px;
+}
+.hero h1{max-width:16ch}
+.hero .lead{margin-top:22px}
+.hero-cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:34px}
+.hero-nota{margin-top:22px;font-size:.85rem;color:var(--gris)}
+
+/* ---------- problema ---------- */
+.grid-problema{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1px;background:var(--borde);border:1px solid var(--borde);border-radius:14px;overflow:hidden;margin-top:44px}
+.celda{background:var(--fondo);padding:28px 24px}
+.celda .num{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--verde-senal);letter-spacing:.1em;display:block;margin-bottom:14px}
+.celda h3{margin-bottom:8px}
+.celda p{font-size:.93rem;color:var(--gris)}
+
+/* ---------- SIGNATURE: la credencial ---------- */
+.mecanismo{background:var(--verde-profundo);color:#fff;overflow:hidden}
+.mec-head{max-width:62ch}
+.mec-head h2{margin-bottom:18px}
+.credencial-zona{
+  margin-top:56px;display:grid;grid-template-columns:1fr minmax(280px,340px) 1fr;
+  gap:32px;align-items:center;
+}
+@media(max-width:940px){.credencial-zona{grid-template-columns:1fr;gap:22px}}
+.credencial{
+  background:#fff;color:var(--carbon);border-radius:18px;padding:24px;
+  box-shadow:0 24px 60px rgba(0,0,0,.28);position:relative;
+}
+.cred-top{display:flex;gap:14px;align-items:center;padding-bottom:18px;border-bottom:1px solid var(--borde)}
+.avatar{width:52px;height:52px;border-radius:12px;background:var(--fondo);border:1px solid var(--borde);display:grid;place-items:center;font-weight:700;color:var(--verde-profundo);font-size:1.05rem;flex:0 0 auto}
+.cred-nombre{font-weight:700;font-size:1.02rem;letter-spacing:-.01em}
+.cred-sub{font-size:.8rem;color:var(--gris)}
+.check{
+  margin-left:auto;width:24px;height:24px;border-radius:50%;background:var(--verde-senal);
+  display:grid;place-items:center;flex:0 0 auto;
+}
+.check svg{width:13px;height:13px}
+.cred-fila{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--fondo);font-size:.85rem}
+.cred-fila:last-child{border-bottom:none}
+.cred-k{font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--gris)}
+.cred-v{font-weight:600}
+.pill{background:#EAF4E2;color:var(--verde-profundo);padding:3px 9px;border-radius:100px;font-size:.72rem;font-weight:600;font-family:'JetBrains Mono',monospace}
+.estrellas{color:var(--verde-senal);letter-spacing:2px}
+
+.lectura{
+  border-left:2px solid var(--verde-senal);padding:4px 0 4px 18px;
+  opacity:0;transform:translateY(14px);animation:sube .6s ease forwards;
+}
+.lectura:nth-of-type(1){animation-delay:.1s}
+.lectura:nth-of-type(2){animation-delay:.25s}
+.lectura:nth-of-type(3){animation-delay:.4s}
+@keyframes sube{to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.lectura{animation:none;opacity:1;transform:none}}
+.lectura + .lectura{margin-top:26px}
+.lectura .quien{font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--verde-senal);display:block;margin-bottom:7px}
+.lectura p{font-size:.94rem;color:rgba(255,255,255,.86)}
+.lectura strong{color:#fff}
+.col-der .lectura{border-left:none;border-right:2px solid var(--verde-senal);padding:4px 18px 4px 0;text-align:right}
+@media(max-width:940px){.col-der .lectura{border-right:none;border-left:2px solid var(--verde-senal);padding:4px 0 4px 18px;text-align:left}}
+
+/* ---------- pasos ---------- */
+.pasos{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:36px;margin-top:48px}
+.paso .idx{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--verde-senal);letter-spacing:.1em;display:block;margin-bottom:12px}
+.paso h3{margin-bottom:9px}
+.paso p{font-size:.93rem;color:var(--gris)}
+
+/* ---------- antes/después ---------- */
+.ad{margin-top:44px;border:1px solid var(--borde);border-radius:14px;overflow:hidden}
+.ad-fila{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--borde)}
+.ad-fila:last-child{border-bottom:none}
+@media(max-width:700px){.ad-fila{grid-template-columns:1fr}}
+.ad-cel{padding:22px 24px;font-size:.93rem}
+.ad-antes{background:var(--fondo);color:var(--gris);border-right:1px solid var(--borde)}
+.ad-desp{background:var(--blanco);font-weight:500}
+.ad-head{font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;padding:14px 24px;font-weight:500}
+.ad-head.a{background:#EDEFE9;color:var(--gris);border-right:1px solid var(--borde)}
+.ad-head.d{background:#EAF4E2;color:var(--verde-profundo)}
+
+/* ---------- paneles de segmento ---------- */
+.panel{border-radius:20px;padding:52px 44px;margin-bottom:20px}
+@media(max-width:700px){.panel{padding:36px 24px}}
+.panel-prop{background:var(--blanco);border:1px solid var(--borde)}
+.panel-jard{background:var(--verde-oscuro);color:#fff}
+.panel-jard .lead{color:rgba(255,255,255,.72)}
+.panel-grid{display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:start}
+@media(max-width:880px){.panel-grid{grid-template-columns:1fr;gap:30px}}
+.lista{list-style:none;display:grid;gap:16px}
+.lista li{display:flex;gap:12px;font-size:.95rem;align-items:flex-start}
+.tick{width:19px;height:19px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;margin-top:3px}
+.tick.verde{background:#EAF4E2}
+.tick.verde svg{stroke:var(--verde-profundo)}
+.tick.senal{background:rgba(122,182,72,.22)}
+.tick.senal svg{stroke:var(--verde-senal)}
+.panel h2{margin-bottom:14px}
+.panel .cta-wrap{margin-top:30px}
+
+/* ---------- cierre ---------- */
+.cierre{background:var(--verde-profundo);color:#fff;text-align:center}
+.cierre h2{max-width:20ch;margin:0 auto 18px}
+.cierre .lead{margin:0 auto 32px;text-align:center}
+
+/* ---------- footer ---------- */
+footer{background:var(--carbon);color:rgba(255,255,255,.55);padding:38px 0;font-size:.84rem}
+.foot-in{display:flex;gap:18px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+footer a{color:rgba(255,255,255,.8)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-in">
+    <a href="#" class="logo"><span class="logo-mark"><span></span></span>GreenGate</a>
+    <div class="nav-links">
+      <a href="#problema">El problema</a>
+      <a href="#como">Cómo funciona</a>
+      <a href="#propietarios">Propietarios</a>
+      <a href="#jardineros">Jardineros</a>
+      <a class="btn-sm" href="mailto:hola@greengate.com.ar?subject=Demo%20GreenGate%20-%20Administraci%C3%B3n">Pedir demo</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="wrap">
+    <span class="tag">Para administraciones de barrios privados</span>
+    <h1>Sabés quién entra. Sabés qué hizo. Sabés si lo hizo bien.</h1>
+    <p class="lead">GreenGate ordena el servicio de jardinería dentro de tu barrio: jardineros con documentación validada, trabajos con registro de ingreso y una reputación que los propietarios pueden ver antes de contratar. Sin cambiar cómo opera hoy la administración.</p>
+    <div class="hero-cta">
+      <a class="btn btn-primario" href="mailto:hola@greengate.com.ar?subject=Demo%20GreenGate%20-%20Administraci%C3%B3n&body=Barrio%3A%0ACantidad%20de%20lotes%3A%0ANombre%20y%20cargo%3A%0ATel%C3%A9fono%3A">Solicitar una demo</a>
+      <a class="btn btn-ghost" href="#como">Ver cómo funciona</a>
+    </div>
+    <p class="hero-nota">Hoy en jardinería. Mañana, en todos los servicios que entran al barrio.</p>
+  </div>
+</header>
+
+<!-- PROBLEMA -->
+<section id="problema">
+  <div class="wrap">
+    <span class="eyebrow">El punto de partida</span>
+    <h2>El barrio no contrata a ciegas.<br>Valida el ingreso. No controla el servicio.</h2>
+    <p class="lead" style="margin-top:16px">El servicio de jardinería en barrios privados funciona sobre acuerdos informales, recomendaciones de pasillo y un control de acceso que registra una entrada, pero no un servicio.</p>
+
+    <div class="grid-problema">
+      <div class="celda">
+        <span class="num">01</span>
+        <h3>Personal sin cobertura</h3>
+        <p>Se contrata sin ART, sin seguro y sin verificación de identidad ni antecedentes. Cuando algo pasa dentro del barrio, la pregunta llega a la administración.</p>
+      </div>
+      <div class="celda">
+        <span class="num">02</span>
+        <h3>La calidad es invisible</h3>
+        <p>No hay forma de distinguir al jardinero que trabaja bien del que no. La única señal disponible es el precio, y el precio no dice nada sobre el resultado.</p>
+      </div>
+      <div class="celda">
+        <span class="num">03</span>
+        <h3>Sin trazabilidad del servicio</h3>
+        <p>Quedan registrados los ingresos, no los trabajos. Ante un reclamo no hay evidencia de qué se hizo, cuándo, ni en qué lote.</p>
+      </div>
+      <div class="celda">
+        <span class="num">04</span>
+        <h3>El reclamo cae en el lugar equivocado</h3>
+        <p>El propietario reclama a la administración por un servicio que la administración no contrató, no controla y no puede auditar.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SIGNATURE: LA CREDENCIAL -->
+<section class="mecanismo">
+  <div class="wrap">
+    <div class="mec-head">
+      <span class="eyebrow claro">El mecanismo</span>
+      <h2>Un solo registro. Tres lecturas distintas.</h2>
+      <p class="lead" style="margin-top:16px">GreenGate no crea tres productos para tres usuarios. Hace visible una sola cosa —quién es cada jardinero, qué trabajos hizo y cómo los calificaron— y esa visibilidad resuelve un problema diferente para cada uno.</p>
+    </div>
+
+    <div class="credencial-zona">
+      <div class="col-izq">
+        <div class="lectura">
+          <span class="quien">Lo que ve la administración</span>
+          <p><strong>Respaldo.</strong> Documentación vigente, cobertura activa y antecedentes verificados antes de habilitar el ingreso. Si el estado cambia, el acceso se suspende.</p>
+        </div>
+        <div class="lectura">
+          <span class="quien">Lo que ve el propietario</span>
+          <p><strong>Criterio.</strong> Trabajos realizados y calificaciones de vecinos del mismo barrio. Puede comparar antes de contratar, en lugar de contratar a quien le pasaron por WhatsApp.</p>
+        </div>
+      </div>
+
+      <div class="credencial" aria-label="Ejemplo de perfil verificado de un jardinero">
+        <div class="cred-top">
+          <div class="avatar">MR</div>
+          <div>
+            <div class="cred-nombre">Miguel R.</div>
+            <div class="cred-sub">Jardinería y mantenimiento</div>
+          </div>
+          <div class="check" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#1C3A18" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </div>
+        </div>
+        <div class="cred-fila"><span class="cred-k">Identidad</span><span class="cred-v"><span class="pill">Verificada</span></span></div>
+        <div class="cred-fila"><span class="cred-k">Antecedentes</span><span class="cred-v"><span class="pill">Sin observaciones</span></span></div>
+        <div class="cred-fila"><span class="cred-k">ART / Seguro</span><span class="cred-v mono" style="font-size:.8rem">Vigente · 03/2027</span></div>
+        <div class="cred-fila"><span class="cred-k">Trabajos en el barrio</span><span class="cred-v">47</span></div>
+        <div class="cred-fila"><span class="cred-k">Calificación</span><span class="cred-v"><span class="estrellas">★★★★★</span> <span style="color:var(--gris);font-weight:500">4,8</span></span></div>
+        <div class="cred-fila"><span class="cred-k">Último ingreso</span><span class="cred-v mono" style="font-size:.8rem">Lote 214 · 08:40</span></div>
+      </div>
+
+      <div class="col-der">
+        <div class="lectura">
+          <span class="quien">Lo que gana el jardinero</span>
+          <p><strong>Visibilidad.</strong> Su trabajo bien hecho deja de ser invisible. Cada trabajo calificado queda en su perfil y lo pone adelante del próximo vecino que necesita el servicio.</p>
+        </div>
+        <div class="lectura">
+          <span class="quien">Por qué funciona</span>
+          <p>Los tres tienen incentivo para sostener el mismo registro. Por eso el sistema se mantiene actualizado sin que nadie tenga que auditarlo.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CÓMO FUNCIONA -->
+<section id="como" class="sec-blanca">
+  <div class="wrap">
+    <span class="eyebrow">Cómo funciona</span>
+    <h2>Tres pasos, en este orden.</h2>
+    <p class="lead" style="margin-top:16px">La secuencia importa: la administración habilita, y recién ahí el barrio se activa de los dos lados.</p>
+
+    <div class="pasos">
+      <div class="paso">
+        <span class="idx">Paso 01</span>
+        <h3>La administración habilita el barrio</h3>
+        <p>Define los requisitos de ingreso. Los jardineros que ya trabajan en el barrio se registran y presentan documentación: identidad, antecedentes, ART o seguro. GreenGate valida y solo los aprobados quedan visibles.</p>
+      </div>
+      <div class="paso">
+        <span class="idx">Paso 02</span>
+        <h3>El propietario elige</h3>
+        <p>Ve a los jardineros habilitados en su barrio, con trabajos realizados, calificaciones de vecinos y servicios ofrecidos. Contrata desde la app y acuerda la visita.</p>
+      </div>
+      <div class="paso">
+        <span class="idx">Paso 03</span>
+        <h3>El trabajo queda registrado</h3>
+        <p>Ingreso, lote, horario y calificación quedan asentados. La administración ve la actividad del barrio; el jardinero acumula reputación; el propietario tiene historial de su propiedad.</p>
+      </div>
+    </div>
+
+    <div class="ad">
+      <div class="ad-fila">
+        <div class="ad-head a">Hoy</div>
+        <div class="ad-head d">Con GreenGate</div>
+      </div>
+      <div class="ad-fila">
+        <div class="ad-cel ad-antes">Entra gente al barrio sin verificación de identidad ni cobertura.</div>
+        <div class="ad-cel ad-desp">Solo ingresan proveedores con documentación validada y vigente.</div>
+      </div>
+      <div class="ad-fila">
+        <div class="ad-cel ad-antes">Los reclamos por jardinería llegan a la administración sin evidencia.</div>
+        <div class="ad-cel ad-desp">Cada trabajo tiene registro de quién, cuándo, dónde y con qué calificación.</div>
+      </div>
+      <div class="ad-fila">
+        <div class="ad-cel ad-antes">La administración recomienda proveedores y asume el costo reputacional.</div>
+        <div class="ad-cel ad-desp">La administración habilita un estándar; la elección la hace cada propietario.</div>
+      </div>
+      <div class="ad-fila">
+        <div class="ad-cel ad-antes">Los buenos jardineros y los malos se ven exactamente igual.</div>
+        <div class="ad-cel ad-desp">La calidad se vuelve visible y el barrio se ordena solo.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROPIETARIOS -->
+<section id="propietarios" style="padding-bottom:0">
+  <div class="wrap">
+    <div class="panel panel-prop">
+      <span class="eyebrow">Si sos propietario</span>
+      <div class="panel-grid">
+        <div>
+          <h2>Elegí con criterio, no por el dato que te pasaron.</h2>
+          <p class="lead">Hoy contratás a quien te recomendó un vecino y esperás que salga bien. Con GreenGate comparás antes de decidir y sabés quién está entrando a tu casa.</p>
+          <div class="cta-wrap">
+            <a class="btn btn-primario" href="mailto:hola@greengate.com.ar?subject=Inter%C3%A9s%20GreenGate%20-%20Propietario&body=Barrio%3A%0ANombre%3A%0AQu%C3%A9%20me%20interesa%3A">Me interesa para mi barrio</a>
+          </div>
+        </div>
+        <ul class="lista">
+          <li><span class="tick verde"><svg viewBox="0 0 24 24" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><polyline points="20 6 9 17 4 12"></polyline></svg></span><span><strong>Comparás opciones reales.</strong> Varios jardineros habilitados en tu barrio, con servicios y precios, en un mismo lugar.</span></li>
+          <li><span class="tick verde"><svg viewBox="0 0 24 24" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><polyline points="20 6 9 17 4 12"></polyline></svg></span><span><strong>Ves lo que opinaron tus vecinos.</strong> Calificaciones de gente del mismo barrio, sobre trabajos hechos en casas como la tuya.</span></li>
+          <li><span class="tick verde"><svg viewBox="0 0 24 24" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><polyline points="20 6 9 17 4 12"></polyline></svg></span><span><strong>Sabés quién entra a tu casa.</strong> Identidad verificada, antecedentes chequeados y cobertura vigente.</span></li>
+          <li><span class="tick verde"><svg viewBox="0 0 24 24" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><polyline points="20 6 9 17 4 12"></polyline></svg></span><span><strong>Tenés el historial de tu propiedad.</strong> Qué se hizo, cuándo y quién lo hizo, sin depender de tu memoria.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- JARDINEROS -->
+<section id="jardineros" style="padding-top:0">
+  <div class="wrap">
+    <div class="panel panel-jard">
+      <span class="eyebrow claro">Si sos jardinero</span>
+      <div class="panel-grid">
+        <div>
+          <h2>Más trabajo en el barrio donde ya estás entrando.</h2>
+          <p class="lead">No te pedimos que cambies cómo trabajás. Te damos algo que hoy no tenés: que los vecinos del barrio sepan que existís y que trabajás bien.</p>
+          <div class="cta-wrap">
+            <a class="btn btn-senal" href="mailto:hola@greengate.com.ar?subject=Inter%C3%A9s%20GreenGate%20-%20Jardinero&body=Nombre%3A%0ABarrios%20donde%20trabajo%3A%0ATel%C3%A9fono%3A">Quiero sumarme</a>
+          </div>
+        </div>
+        <ul class="lista">
+          <li><span class="tick senal"><svg viewBox="0 0 24 24" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><polyline points="20 6 9 17 4 12"></polyline></svg></span><span><strong>Tu trabajo bien hecho te consigue el próximo.</strong> Cada calificación queda en tu perfil y te muestra a todos los vecinos del barrio.</span></li>
+          <li><span class="tick senal"><svg viewBox="0 0 24 24" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><polyline points="20 6 9 17 4 12"></polyline></svg></span><span><strong>Clientes juntos, no desparramados.</strong> Más casas dentro del mismo barrio: menos viajes, menos tiempo muerto, más días cargados.</span></li>
+          <li><span class="tick senal"><svg viewBox="0 0 24 24" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><polyline points="20 6 9 17 4 12"></polyline></svg></span><span><strong>Entrada sin vueltas.</strong> Estando habilitado, el ingreso al barrio deja de ser un trámite cada vez.</span></li>
+          <li><span class="tick senal"><svg viewBox="0 0 24 24" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><polyline points="20 6 9 17 4 12"></polyline></svg></span><span><strong>Agenda y cobros ordenados.</strong> Los trabajos acordados quedan registrados. Vos ponés tus precios.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CIERRE -->
+<section class="cierre">
+  <div class="wrap">
+    <span class="eyebrow claro" style="text-align:center">Para administraciones</span>
+    <h2>El barrio ya tiene control de acceso. Le falta control de servicio.</h2>
+    <p class="lead">Coordinamos una demo de 30 minutos y te mostramos cómo se vería GreenGate en tu barrio.</p>
+    <a class="btn btn-senal" href="mailto:hola@greengate.com.ar?subject=Demo%20GreenGate%20-%20Administraci%C3%B3n&body=Barrio%3A%0ACantidad%20de%20lotes%3A%0ANombre%20y%20cargo%3A%0ATel%C3%A9fono%3A">Solicitar una demo</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-in">
+    <span>© 2026 GreenGate</span>
+    <span><a href="mailto:hola@greengate.com.ar">hola@greengate.com.ar</a></span>
+  </div>
+</footer>
+
+</body>
+</html>
