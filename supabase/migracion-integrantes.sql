@@ -39,7 +39,10 @@ create index if not exists idx_verificacion_integrante on verificacion(integrant
 -- Limpieza de la vista: ya no expone antecedentes_ok/seguro_ok/identidad_ok
 -- (esos booleans no contemplaban equipos y ninguna pantalla los usa hoy;
 -- src/verificacion.ts es la única fuente de verdad).
-create or replace view prestador_directorio as
+-- Postgres no deja sacar columnas con CREATE OR REPLACE VIEW (error 42P16)
+-- — hay que borrarla y recrearla.
+drop view if exists prestador_directorio;
+create view prestador_directorio as
 select
   p.id,
   p.nombre,
