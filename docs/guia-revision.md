@@ -39,6 +39,7 @@ Si al entrar la app tira "Failed to fetch": el proyecto de base de datos (plan g
 
 ## 3. Si tu mirada es de negocio / producto
 
+- **Cobertura de la propuesta de valor**: [`docs/cobertura-propuesta-valor.md`](cobertura-propuesta-valor.md) — cruza, línea por línea, lo que prometen los 3 Value Proposition Canvas (Propietario, Jardinero, Administración) contra lo que el MVP entrega hoy. Es el documento más directo para responder "¿esta v1 cubre lo que se necesita?".
 - **Documentos fundacionales** (fuera de este repo, se comparten aparte si hacen falta): selección de idea, evaluación de oportunidad, investigación del cliente (encuestas a 80 propietarios y 9 administraciones), Value Proposition Canvas de los 3 segmentos, Product-Market Fit.
 - **Estado de validación por segmento:**
   - Propietarios: ✅ validado con evidencia primaria (n=80).
