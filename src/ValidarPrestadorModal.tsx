@@ -9,7 +9,8 @@ const TIPO_LABELS: Record<string, string> = {
   identidad: 'Identidad',
 }
 
-type Verif = { id: string; tipo: string; estado: string; fecha_vencimiento: string | null }
+type Verif = { id: string; tipo: string; estado: string; fecha_vencimiento: string | null; integrante_id: string | null }
+type Integrante = { id: string; nombre: string; apellido: string | null }
 
 export function ValidarPrestadorModal({
   prestadorId,
@@ -25,18 +26,20 @@ export function ValidarPrestadorModal({
   onCambio: () => void
 }) {
   const [verifs, setVerifs] = useState<Verif[]>([])
+  const [integrantes, setIntegrantes] = useState<Integrante[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     async function cargar() {
-      const { data, error } = await supabase
-        .from('verificacion')
-        .select('id,tipo,estado,fecha_vencimiento')
-        .eq('prestador_id', prestadorId)
-        .order('tipo')
-      if (error) setError(error.message)
-      else setVerifs((data as Verif[]) ?? [])
+      setLoading(true)
+      const [vRes, iRes] = await Promise.all([
+        supabase.from('verificacion').select('id,tipo,estado,fecha_vencimiento,integrante_id').eq('prestador_id', prestadorId).order('tipo'),
+        supabase.from('integrante').select('id,nombre,apellido').eq('prestador_id', prestadorId).eq('activo', true).order('nombre'),
+      ])
+      if (vRes.error) setError(vRes.error.message)
+      else setVerifs((vRes.data as Verif[]) ?? [])
+      setIntegrantes((iRes.data as Integrante[]) ?? [])
       setLoading(false)
     }
     cargar()
@@ -52,6 +55,10 @@ export function ValidarPrestadorModal({
     else onCambio()
   }
 
+  const esEquipo = integrantes.length > 0
+  const seguroEquipo = verifs.filter((v) => v.tipo === 'seguro_art' && v.integrante_id === null)
+  const otrasUnipersonal = verifs.filter((v) => v.integrante_id === null && v.tipo !== 'seguro_art')
+
   return (
     <Modal titulo={`Validar: ${prestadorNombre}`} onClose={onClose}>
       {loading ? (
@@ -61,50 +68,53 @@ export function ValidarPrestadorModal({
       ) : verifs.length === 0 ? (
         <p className="text-sm text-gray-500">Este prestador no tiene verificaciones cargadas.</p>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-5">
           <p className="text-sm text-gray-500">
             Elegí tu <strong>decisión</strong> y la <strong>fecha de vencimiento</strong>. El estado
             (Vigente / Vencido) se calcula solo a partir de la fecha — no se elige a mano.
           </p>
-          {verifs.map((v) => {
-            const efectivo = estadoVerificacion(v.estado, v.fecha_vencimiento)
-            const decision = v.estado === 'vencido' ? 'verificado' : v.estado
-            return (
-              <div key={v.id} className="rounded-lg border border-gray-200 p-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-medium text-gray-800">{TIPO_LABELS[v.tipo] ?? v.tipo}</div>
-                  <span className={'text-xs font-semibold ' + ESTADO_COLOR[efectivo]}>
-                    {ESTADO_LABEL[efectivo]}
-                  </span>
-                </div>
-                <div className="mt-2 grid grid-cols-2 gap-3">
-                  <label className="block text-xs text-gray-500">
-                    Decisión
-                    <select
-                      value={decision}
-                      onChange={(e) => guardar(v.id, { estado: e.target.value })}
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1 text-sm capitalize"
-                    >
-                      {ESTADOS_DECISION.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
+
+          {esEquipo && (
+            <p className="rounded-lg bg-gg-light/50 px-3 py-2 text-xs text-gg-dark">
+              Es un equipo de {integrantes.length} persona{integrantes.length === 1 ? '' : 's'}. El seguro es
+              compartido; antecedentes e identidad se validan una por una, porque son datos personales.
+            </p>
+          )}
+
+          {seguroEquipo.length > 0 && (
+            <FilaVerif
+              titulo={esEquipo ? 'Seguro / ART del equipo' : 'Seguro / ART'}
+              verif={seguroEquipo[0]}
+              onGuardar={guardar}
+            />
+          )}
+
+          {!esEquipo &&
+            otrasUnipersonal.map((v) => (
+              <FilaVerif key={v.id} titulo={TIPO_LABELS[v.tipo] ?? v.tipo} verif={v} onGuardar={guardar} />
+            ))}
+
+          {esEquipo &&
+            integrantes.map((integ) => {
+              const propias = verifs.filter((v) => v.integrante_id === integ.id)
+              return (
+                <div key={integ.id} className="rounded-xl border border-gray-200 p-3">
+                  <div className="mb-2 text-sm font-semibold text-gg-dark">
+                    {integ.nombre}
+                    {integ.apellido ? ` ${integ.apellido}` : ''}
+                  </div>
+                  {propias.length === 0 ? (
+                    <p className="text-xs text-gray-400">Sin verificaciones cargadas para esta persona.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {propias.map((v) => (
+                        <FilaVerif key={v.id} titulo={TIPO_LABELS[v.tipo] ?? v.tipo} verif={v} onGuardar={guardar} compacta />
                       ))}
-                    </select>
-                  </label>
-                  <label className="block text-xs text-gray-500">
-                    Vence (opcional)
-                    <input
-                      type="date"
-                      value={v.fecha_vencimiento ?? ''}
-                      onChange={(e) => guardar(v.id, { fecha_vencimiento: e.target.value || null })}
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1 text-sm"
-                    />
-                  </label>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
         </div>
       )}
 
@@ -117,5 +127,53 @@ export function ValidarPrestadorModal({
         </button>
       </div>
     </Modal>
+  )
+}
+
+function FilaVerif({
+  titulo,
+  verif,
+  onGuardar,
+  compacta,
+}: {
+  titulo: string
+  verif: Verif
+  onGuardar: (id: string, cambios: Partial<Verif>) => void
+  compacta?: boolean
+}) {
+  const efectivo = estadoVerificacion(verif.estado, verif.fecha_vencimiento)
+  const decision = verif.estado === 'vencido' ? 'verificado' : verif.estado
+  return (
+    <div className={compacta ? '' : 'rounded-lg border border-gray-200 p-3'}>
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-medium text-gray-800">{titulo}</div>
+        <span className={'text-xs font-semibold ' + ESTADO_COLOR[efectivo]}>{ESTADO_LABEL[efectivo]}</span>
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-3">
+        <label className="block text-xs text-gray-500">
+          Decisión
+          <select
+            value={decision}
+            onChange={(e) => onGuardar(verif.id, { estado: e.target.value })}
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1 text-sm capitalize"
+          >
+            {ESTADOS_DECISION.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block text-xs text-gray-500">
+          Vence (opcional)
+          <input
+            type="date"
+            value={verif.fecha_vencimiento ?? ''}
+            onChange={(e) => onGuardar(verif.id, { fecha_vencimiento: e.target.value || null })}
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1 text-sm"
+          />
+        </label>
+      </div>
+    </div>
   )
 }

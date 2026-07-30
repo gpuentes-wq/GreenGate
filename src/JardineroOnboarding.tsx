@@ -3,7 +3,8 @@ import { supabase } from './lib/supabase'
 import { Campo, inputClass } from './ui'
 import { servicioLabel } from './labels'
 import { SolicitudesPanel } from './SolicitudesPanel'
-import { VerificacionesResumen } from './VerificacionesResumen'
+import { JardineroPanel } from './JardineroPanel'
+import { IntegrantesManager } from './IntegrantesManager'
 
 const SERVICIOS = ['jardineria', 'poda', 'fumigacion', 'riego', 'diseno_paisajismo', 'limpieza_exterior', 'otro']
 
@@ -13,6 +14,21 @@ const CONDICIONES = [
   { v: 'monotributo', l: 'Monotributo' },
   { v: 'responsable_inscripto', l: 'Responsable inscripto' },
 ]
+
+type Seccion = 'panel' | 'perfil' | 'equipo' | 'solicitudes'
+
+const TITULOS: Record<Seccion, string> = {
+  panel: 'Tu panel',
+  perfil: 'Editá tu perfil',
+  equipo: 'Tu equipo',
+  solicitudes: 'Tus solicitudes',
+}
+const SUBTITULOS: Record<Seccion, string> = {
+  panel: 'Todo lo que necesitás para gestionar tu trabajo en GreenGate, de un vistazo.',
+  perfil: 'Actualizá tus datos. Los cambios se reflejan en el directorio al instante.',
+  equipo: 'Si trabajás con otras personas, sumalas acá para que cada una tenga su propia verificación.',
+  solicitudes: 'Pedidos de contacto que te dejaron los propietarios.',
+}
 
 type BarrioOpt = { id: string; nombre: string }
 type PrestadorLite = { id: string; nombre: string; apellido: string | null; razon_social: string | null; es_empresa: boolean }
@@ -26,7 +42,7 @@ export default function JardineroOnboarding() {
   const [barrios, setBarrios] = useState<BarrioOpt[]>([])
   const [jardineros, setJardineros] = useState<PrestadorLite[]>([])
   const [editId, setEditId] = useState<string | null>(null)
-  const [seccion, setSeccion] = useState<'perfil' | 'solicitudes'>('perfil')
+  const [seccion, setSeccion] = useState<Seccion>('panel')
 
   const [esEmpresa, setEsEmpresa] = useState(false)
   const [nombre, setNombre] = useState('')
@@ -66,7 +82,7 @@ export default function JardineroOnboarding() {
 
   function reiniciar() {
     setEditId(null)
-    setSeccion('perfil')
+    setSeccion('panel')
     setEsEmpresa(false)
     setNombre('')
     setApellido('')
@@ -96,7 +112,7 @@ export default function JardineroOnboarding() {
     }
     setError(null)
     setOkEditar(false)
-    setSeccion('perfil')
+    setSeccion('panel')
     const [{ data: p }, { data: esp }] = await Promise.all([
       supabase.from('prestador').select('*').eq('id', id).single(),
       supabase.from('prestador_servicio').select('tipo').eq('prestador_id', id),
@@ -231,15 +247,15 @@ export default function JardineroOnboarding() {
     )
   }
 
-  const titulo = editId ? (seccion === 'solicitudes' ? 'Tus solicitudes' : 'Editá tu perfil') : 'Sumate como jardinero'
-  const subtitulo = editId
-    ? seccion === 'solicitudes'
-      ? 'Pedidos de contacto que te dejaron los propietarios.'
-      : 'Actualizá tus datos. Los cambios se reflejan en el directorio al instante.'
-    : 'Creá tu perfil gratis. No necesitás estar formalizado para empezar — eso es opcional.'
+  const titulo = !editId ? 'Sumate como jardinero' : TITULOS[seccion]
+  const subtitulo = !editId
+    ? 'Creá tu perfil gratis. No necesitás estar formalizado para empezar — eso es opcional.'
+    : SUBTITULOS[seccion]
+
+  const ancho = editId && seccion === 'panel' ? 'max-w-5xl' : 'max-w-2xl'
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-8">
+    <main className={'mx-auto px-6 py-8 ' + ancho}>
       <h1 className="text-xl font-semibold text-gg-dark">{titulo}</h1>
       <p className="mb-6 text-sm text-gray-500">{subtitulo}</p>
 
@@ -262,8 +278,14 @@ export default function JardineroOnboarding() {
 
       {editId && (
         <div className="mb-6 flex gap-1 border-b border-gray-200">
+          <SubTab activo={seccion === 'panel'} onClick={() => setSeccion('panel')}>
+            Mi panel
+          </SubTab>
           <SubTab activo={seccion === 'perfil'} onClick={() => setSeccion('perfil')}>
             Mi perfil
+          </SubTab>
+          <SubTab activo={seccion === 'equipo'} onClick={() => setSeccion('equipo')}>
+            Mi equipo
           </SubTab>
           <SubTab activo={seccion === 'solicitudes'} onClick={() => setSeccion('solicitudes')}>
             Solicitudes
@@ -271,12 +293,19 @@ export default function JardineroOnboarding() {
         </div>
       )}
 
-      {editId && seccion === 'solicitudes' ? (
+      {editId && seccion === 'panel' ? (
+        <JardineroPanel
+          prestadorId={editId}
+          onVerSolicitudes={() => setSeccion('solicitudes')}
+          onEditarPerfil={() => setSeccion('perfil')}
+          onVerEquipo={() => setSeccion('equipo')}
+        />
+      ) : editId && seccion === 'equipo' ? (
+        <IntegrantesManager prestadorId={editId} />
+      ) : editId && seccion === 'solicitudes' ? (
         <SolicitudesPanel prestadorId={editId} />
       ) : (
         <>
-          {editId && <VerificacionesResumen prestadorId={editId} />}
-
           {okEditar && (
             <div className="mb-6 rounded-lg border border-gg-light bg-gg-light/50 p-3 text-sm font-medium text-gg-dark">
               ✓ Cambios guardados.

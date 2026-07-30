@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from './lib/supabase'
 import type { Barrio, PrestadorDirectorio } from './types'
-import { Insignia, EmptyState } from './ui'
+import { Insignia, EmptyState, Tarjeta } from './ui'
 import { AltaBarrioModal } from './AltaBarrioModal'
 import { ValidarPrestadorModal } from './ValidarPrestadorModal'
-import { alertaVencimiento, badgesPrestador, prestadorVerificado, type VerificacionRow } from './verificacion'
+import { alertaVencimiento, badgesPrestador, prestadorVerificado, type VerificacionRow, type IntegranteRow } from './verificacion'
 
 const TIPO_LABELS: Record<string, string> = {
   antecedentes_penales: 'Antecedentes',
@@ -13,12 +13,14 @@ const TIPO_LABELS: Record<string, string> = {
 }
 
 type Verif = VerificacionRow & { id: string; prestador_id: string }
+type IntegranteConNombre = IntegranteRow & { prestador_id: string; nombre: string; apellido: string | null }
 type Alerta = { id: string; prestador_id: string; nombre: string; tipo: string; texto: string; vencido: boolean }
 
 export default function AdminPanel() {
   const [barrios, setBarrios] = useState<Barrio[]>([])
   const [prestadores, setPrestadores] = useState<PrestadorDirectorio[]>([])
   const [verificaciones, setVerificaciones] = useState<Verif[]>([])
+  const [integrantes, setIntegrantes] = useState<IntegranteConNombre[]>([])
   const [administracionId, setAdministracionId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -27,7 +29,7 @@ export default function AdminPanel() {
 
   const cargar = useCallback(async () => {
     setError(null)
-    const [b, p, a, v] = await Promise.all([
+    const [b, p, a, v, i] = await Promise.all([
       supabase
         .from('barrio')
         .select('id,nombre,localidad,zona,cantidad_lotes,etapa_activacion')
@@ -37,7 +39,8 @@ export default function AdminPanel() {
         .select('*')
         .order('puntaje_promedio', { ascending: false, nullsFirst: false }),
       supabase.from('administracion').select('id').limit(1),
-      supabase.from('verificacion').select('id,tipo,estado,fecha_vencimiento,prestador_id'),
+      supabase.from('verificacion').select('id,tipo,estado,fecha_vencimiento,prestador_id,integrante_id'),
+      supabase.from('integrante').select('id,prestador_id,nombre,apellido,activo'),
     ])
     if (b.error) {
       setError(b.error.message)
@@ -50,6 +53,7 @@ export default function AdminPanel() {
     setBarrios((b.data as Barrio[]) ?? [])
     setPrestadores((p.data as PrestadorDirectorio[]) ?? [])
     setVerificaciones((v.data as Verif[]) ?? [])
+    setIntegrantes((i.data as IntegranteConNombre[]) ?? [])
     const adm = (a.data as Array<{ id: string }>) ?? []
     if (adm.length > 0) setAdministracionId(adm[0].id)
   }, [])
@@ -68,18 +72,32 @@ export default function AdminPanel() {
     return m
   }, [verificaciones])
 
-  const pendientes = prestadores.filter((p) => !prestadorVerificado(verifsPorPrestador[p.id] ?? [])).length
+  const integrantesPorPrestador = useMemo(() => {
+    const m: Record<string, IntegranteConNombre[]> = {}
+    for (const i of integrantes) {
+      if (!m[i.prestador_id]) m[i.prestador_id] = []
+      m[i.prestador_id].push(i)
+    }
+    return m
+  }, [integrantes])
+
+  const pendientes = prestadores.filter(
+    (p) => !prestadorVerificado(verifsPorPrestador[p.id] ?? [], integrantesPorPrestador[p.id] ?? []),
+  ).length
 
   const alertas = useMemo<Alerta[]>(() => {
     const nombrePorId = new Map(prestadores.map((p) => [p.id, nombreMostrar(p)]))
+    const integrantePorId = new Map(integrantes.map((i) => [i.id, i]))
     const out: Alerta[] = []
     for (const v of verificaciones) {
       const al = alertaVencimiento(v.estado, v.fecha_vencimiento)
       if (al) {
+        const prestadorNombre = nombrePorId.get(v.prestador_id) ?? 'Prestador'
+        const integ = v.integrante_id ? integrantePorId.get(v.integrante_id) : null
         out.push({
           id: v.id,
           prestador_id: v.prestador_id,
-          nombre: nombrePorId.get(v.prestador_id) ?? 'Prestador',
+          nombre: integ ? `${prestadorNombre} — ${integ.nombre}${integ.apellido ? ' ' + integ.apellido : ''}` : prestadorNombre,
           tipo: v.tipo,
           texto: al.texto,
           vencido: al.vencido,
@@ -87,7 +105,7 @@ export default function AdminPanel() {
       }
     }
     return out.sort((a, b) => Number(b.vencido) - Number(a.vencido))
-  }, [verificaciones, prestadores])
+  }, [verificaciones, prestadores, integrantes])
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
@@ -203,10 +221,18 @@ export default function AdminPanel() {
                   </thead>
                   <tbody>
                     {prestadores.map((p) => {
-                      const b = badgesPrestador(verifsPorPrestador[p.id] ?? [])
+                      const integrantesDe = integrantesPorPrestador[p.id] ?? []
+                      const b = badgesPrestador(verifsPorPrestador[p.id] ?? [], integrantesDe)
                       return (
                         <tr key={p.id} className="border-t border-gray-100">
-                          <td className="px-4 py-2 font-medium text-gray-800">{nombreMostrar(p)}</td>
+                          <td className="px-4 py-2 font-medium text-gray-800">
+                            {nombreMostrar(p)}
+                            {integrantesDe.length > 0 && (
+                              <span className="ml-2 text-xs font-normal text-gray-400">
+                                · {integrantesDe.length} integrante{integrantesDe.length === 1 ? '' : 's'}
+                              </span>
+                            )}
+                          </td>
                           <td className="px-4 py-2 text-gray-600">{p.tipo_servicio_principal}</td>
                           <td className="px-4 py-2 text-gray-600">
                             {p.puntaje_promedio != null
@@ -268,13 +294,3 @@ function nombreMostrar(p: PrestadorDirectorio): string {
   return p.apellido ? `${p.nombre} ${p.apellido}` : p.nombre
 }
 
-function Tarjeta({ titulo, valor, acento }: { titulo: string; valor: number; acento?: boolean }) {
-  return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
-      <div className="text-sm text-gray-500">{titulo}</div>
-      <div className={'mt-1 text-2xl font-semibold ' + (acento ? 'text-amber-600' : 'text-gg-dark')}>
-        {valor}
-      </div>
-    </div>
-  )
-}

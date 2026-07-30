@@ -4,7 +4,7 @@ import type { PrestadorDirectorio, Especialidad } from './types'
 import { servicioLabel } from './labels'
 import { Insignia, EmptyState } from './ui'
 import { ContactarModal } from './ContactarModal'
-import { badgesPrestador, prestadorVerificado, type VerificacionRow } from './verificacion'
+import { badgesPrestador, prestadorVerificado, type VerificacionRow, type IntegranteRow } from './verificacion'
 
 type Extra = { tarifa: number | null; experiencia: number | null }
 
@@ -14,6 +14,7 @@ export default function PropietarioDirectorio() {
   const [extras, setExtras] = useState<Record<string, Extra>>({})
   const [fotos, setFotos] = useState<Record<string, string[]>>({})
   const [verifs, setVerifs] = useState<Record<string, VerificacionRow[]>>({})
+  const [integrantes, setIntegrantes] = useState<Record<string, IntegranteRow[]>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [soloVerificados, setSoloVerificados] = useState(false)
@@ -25,14 +26,15 @@ export default function PropietarioDirectorio() {
     async function cargar() {
       setLoading(true)
       setError(null)
-      const [p, e, x, f, v] = await Promise.all([
+      const [p, e, x, f, v, i] = await Promise.all([
         supabase.from('prestador_directorio').select('*'),
         supabase.from('prestador_servicio').select('prestador_id,tipo,tarifa'),
         supabase.from('prestador').select('id,tarifa_referencia,anios_experiencia'),
         supabase.from('prestador_foto').select('prestador_id,url,orden').order('orden'),
-        supabase.from('verificacion').select('prestador_id,tipo,estado,fecha_vencimiento'),
+        supabase.from('verificacion').select('prestador_id,integrante_id,tipo,estado,fecha_vencimiento'),
+        supabase.from('integrante').select('id,prestador_id,activo'),
       ])
-      const err = p.error || e.error || x.error || v.error
+      const err = p.error || e.error || x.error || v.error || i.error
       if (err) {
         setError(err.message)
         setLoading(false)
@@ -55,9 +57,16 @@ export default function PropietarioDirectorio() {
       const vrows = (v.data as Array<{ prestador_id: string } & VerificacionRow>) ?? []
       for (const r of vrows) {
         if (!vmap[r.prestador_id]) vmap[r.prestador_id] = []
-        vmap[r.prestador_id].push({ tipo: r.tipo, estado: r.estado, fecha_vencimiento: r.fecha_vencimiento })
+        vmap[r.prestador_id].push({ tipo: r.tipo, estado: r.estado, fecha_vencimiento: r.fecha_vencimiento, integrante_id: r.integrante_id })
       }
       setVerifs(vmap)
+      const imap: Record<string, IntegranteRow[]> = {}
+      const irows = (i.data as Array<{ id: string; prestador_id: string; activo: boolean }>) ?? []
+      for (const r of irows) {
+        if (!imap[r.prestador_id]) imap[r.prestador_id] = []
+        imap[r.prestador_id].push({ id: r.id, activo: r.activo })
+      }
+      setIntegrantes(imap)
       setLoading(false)
     }
     cargar()
@@ -75,10 +84,10 @@ export default function PropietarioDirectorio() {
   const lista = useMemo(() => {
     let l = [...prestadores]
     if (soloVerificados) {
-      l = l.filter((p) => prestadorVerificado(verifs[p.id] ?? []))
+      l = l.filter((p) => prestadorVerificado(verifs[p.id] ?? [], integrantes[p.id] ?? []))
     }
     return l.sort((a, b) => (b.puntaje_promedio ?? -1) - (a.puntaje_promedio ?? -1))
-  }, [prestadores, soloVerificados, verifs])
+  }, [prestadores, soloVerificados, verifs, integrantes])
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
@@ -114,7 +123,7 @@ export default function PropietarioDirectorio() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {lista.map((p) => {
             const nombre = p.es_empresa && p.razon_social ? p.razon_social : `${p.nombre}${p.apellido ? ' ' + p.apellido : ''}`
-            const badges = badgesPrestador(verifs[p.id] ?? [])
+            const badges = badgesPrestador(verifs[p.id] ?? [], integrantes[p.id] ?? [])
             const verificado = badges.antecedentes && badges.seguro && badges.identidad
             const esp = espPorPrestador[p.id] ?? []
             const ex = extras[p.id]

@@ -31,10 +31,12 @@ alter table prestador            enable row level security;
 alter table prestador_servicio   enable row level security;
 alter table prestador_barrio     enable row level security;
 alter table prestador_foto       enable row level security;
+alter table integrante           enable row level security;
 alter table verificacion         enable row level security;
 alter table trabajo              enable row level security;
 alter table valoracion           enable row level security;
 alter table ingreso              enable row level security;
+alter table solicitud            enable row level security;
 alter table perfil               enable row level security;
 
 -- ── Ejemplos de políticas (a completar con cada tabla y operación) ────────
@@ -62,5 +64,7 @@ create policy "verificaciones de mis barrios" on verificacion
   );
 
 -- NOTA: faltan las políticas para propietario, prestador, trabajo, valoracion,
--- prestador_barrio, prestador_servicio e ingreso. Las definimos en detalle
--- cuando tengamos el login y los flujos de cada rol, y las probamos una por una.
+-- prestador_barrio, prestador_servicio, ingreso, integrante y solicitud. Las
+-- definimos en detalle cuando tengamos el login y los flujos de cada rol, y
+-- las probamos una por una. Para integrante: cada prestador-equipo debe
+-- poder gestionar SOLO sus propios integrantes (scope por prestador_id).

@@ -10,8 +10,8 @@
 
 -- ── Limpieza: borra datos de ejemplo previos para recargar sin conflictos ──
 truncate administracion, barrio, propietario, lote, prestador,
-  prestador_servicio, prestador_barrio, prestador_foto, verificacion,
-  trabajo, valoracion, ingreso restart identity cascade;
+  prestador_servicio, prestador_barrio, prestador_foto, integrante, verificacion,
+  trabajo, valoracion, ingreso, solicitud restart identity cascade;
 
 -- ── Administración (gestiona varios barrios de zona norte) ──
 insert into administracion (id, razon_social, cuit, condicion_fiscal, domicilio, contacto_nombre, contacto_rol, contacto_cel, contacto_email, etapa_comercial, plan, fecha_alta_contrato) values
@@ -62,19 +62,29 @@ insert into prestador_foto (prestador_id, url, descripcion, orden) values
   ('e0000000-0000-0000-0000-000000000001', 'https://picsum.photos/seed/greengate2/600/400', 'Poda de arbustos', 2),
   ('e0000000-0000-0000-0000-000000000002', 'https://picsum.photos/seed/greengate3/600/400', 'Diseño de cantero con riego', 1);
 
+-- Integrantes de "Jardines del Norte" (equipo, no unipersonal): antecedentes
+-- e identidad se verifican por persona; el seguro queda a nivel del equipo.
+insert into integrante (id, prestador_id, nombre, apellido, documento, activo) values
+  ('f1000000-0000-0000-0000-000000000001', 'e0000000-0000-0000-0000-000000000002', 'Diego', 'Pereyra', '28444555', true),
+  ('f1000000-0000-0000-0000-000000000002', 'e0000000-0000-0000-0000-000000000002', 'Martín', 'Sosa', '30222111', true);
+
 -- ── Verificaciones (SOLO ESTADO; cada prestador en su barrio) ──
-insert into verificacion (prestador_id, barrio_id, tipo, estado, fecha_emision, fecha_vencimiento, aseguradora, nro_poliza, validado_por, validado_en) values
-  -- Roberto (Ayres de Pilar): completo y vigente
-  ('e0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'antecedentes_penales', 'verificado', '2026-01-15', '2027-01-15', null, null, 'a0000000-0000-0000-0000-000000000001', '2026-01-20'),
-  ('e0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'seguro_art',           'verificado', '2026-03-01', '2027-03-01', 'La Segunda ART', 'ART-998877', 'a0000000-0000-0000-0000-000000000001', '2026-03-05'),
-  ('e0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'identidad',            'verificado', '2026-01-15', null,         null, null, 'a0000000-0000-0000-0000-000000000001', '2026-01-20'),
-  -- Diego (El Cantón): antecedentes e identidad OK, seguro vencido
-  ('e0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000002', 'antecedentes_penales', 'verificado', '2025-11-10', '2026-11-10', null, null, 'a0000000-0000-0000-0000-000000000001', '2025-11-15'),
-  ('e0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000002', 'seguro_art',           'verificado', '2025-02-01', '2026-02-01', 'Provincia ART', 'ART-112233', 'a0000000-0000-0000-0000-000000000001', '2025-02-10'),
-  ('e0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000002', 'identidad',            'verificado', '2025-11-10', null,         null, null, 'a0000000-0000-0000-0000-000000000001', '2025-11-15'),
-  -- Carlos (Santa Bárbara): pendiente
-  ('e0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000003', 'antecedentes_penales', 'pendiente',  null, null, null, null, null, null),
-  ('e0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000003', 'identidad',            'pendiente',  null, null, null, null, null, null);
+insert into verificacion (prestador_id, integrante_id, barrio_id, tipo, estado, fecha_emision, fecha_vencimiento, aseguradora, nro_poliza, validado_por, validado_en) values
+  -- Roberto (Ayres de Pilar), unipersonal: completo y vigente
+  ('e0000000-0000-0000-0000-000000000001', null, 'b0000000-0000-0000-0000-000000000001', 'antecedentes_penales', 'verificado', '2026-01-15', '2027-01-15', null, null, 'a0000000-0000-0000-0000-000000000001', '2026-01-20'),
+  ('e0000000-0000-0000-0000-000000000001', null, 'b0000000-0000-0000-0000-000000000001', 'seguro_art',           'verificado', '2026-03-01', '2027-03-01', 'La Segunda ART', 'ART-998877', 'a0000000-0000-0000-0000-000000000001', '2026-03-05'),
+  ('e0000000-0000-0000-0000-000000000001', null, 'b0000000-0000-0000-0000-000000000001', 'identidad',            'verificado', '2026-01-15', null,         null, null, 'a0000000-0000-0000-0000-000000000001', '2026-01-20'),
+  -- Jardines del Norte (El Cantón), equipo: seguro compartido, vencido
+  ('e0000000-0000-0000-0000-000000000002', null, 'b0000000-0000-0000-0000-000000000002', 'seguro_art', 'verificado', '2025-02-01', '2026-02-01', 'Provincia ART', 'ART-112233', 'a0000000-0000-0000-0000-000000000001', '2025-02-10'),
+  -- Diego (integrante fundador): al día
+  ('e0000000-0000-0000-0000-000000000002', 'f1000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000002', 'antecedentes_penales', 'verificado', '2025-11-10', '2026-11-10', null, null, 'a0000000-0000-0000-0000-000000000001', '2025-11-15'),
+  ('e0000000-0000-0000-0000-000000000002', 'f1000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000002', 'identidad',            'verificado', '2025-11-10', null,         null, null, 'a0000000-0000-0000-0000-000000000001', '2025-11-15'),
+  -- Martín (se sumó hace poco): identidad ok, antecedentes todavía pendientes
+  ('e0000000-0000-0000-0000-000000000002', 'f1000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000002', 'antecedentes_penales', 'pendiente',  null,         null,         null, null, null, null),
+  ('e0000000-0000-0000-0000-000000000002', 'f1000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000002', 'identidad',            'verificado', '2026-06-01', null,         null, null, 'a0000000-0000-0000-0000-000000000001', '2026-06-02'),
+  -- Carlos (Santa Bárbara), unipersonal: pendiente
+  ('e0000000-0000-0000-0000-000000000003', null, 'b0000000-0000-0000-0000-000000000003', 'antecedentes_penales', 'pendiente',  null, null, null, null, null, null),
+  ('e0000000-0000-0000-0000-000000000003', null, 'b0000000-0000-0000-0000-000000000003', 'identidad',            'pendiente',  null, null, null, null, null, null);
 
 -- ── Trabajos (con frecuencia, estado de pago y comisión 12%) ──
 insert into trabajo (id, lote_id, propietario_id, prestador_id, barrio_id, fecha, tipo_servicio, descripcion, monto, comision_plataforma, metodo_pago, estado_pago, fecha_pago, frecuencia, estado) values
@@ -93,6 +103,6 @@ insert into valoracion (trabajo_id, prestador_id, propietario_id, puntaje, punta
 -- ────────────────────────────────────────────────────────────────────────
 -- Para reiniciar los datos de ejemplo (¡borra todo!):
 -- truncate administracion, barrio, propietario, lote, prestador,
---   prestador_servicio, prestador_barrio, prestador_foto, verificacion,
---   trabajo, valoracion, ingreso restart identity cascade;
+--   prestador_servicio, prestador_barrio, prestador_foto, integrante, verificacion,
+--   trabajo, valoracion, ingreso, solicitud restart identity cascade;
 -- ────────────────────────────────────────────────────────────────────────

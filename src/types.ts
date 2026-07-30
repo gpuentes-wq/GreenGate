@@ -22,9 +22,6 @@ export interface PrestadorDirectorio {
   activo: boolean
   puntaje_promedio: number | null
   cantidad_valoraciones: number
-  antecedentes_ok: boolean
-  seguro_ok: boolean
-  identidad_ok: boolean
 }
 
 export interface Especialidad {

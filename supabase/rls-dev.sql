@@ -13,7 +13,7 @@ do $$
 declare t text;
 begin
   foreach t in array array['administracion','barrio','propietario','lote','prestador',
-                           'prestador_servicio','prestador_barrio','prestador_foto',
+                           'prestador_servicio','prestador_barrio','prestador_foto','integrante',
                            'verificacion','trabajo','valoracion','ingreso','solicitud','perfil'] loop
     execute format('alter table %I disable row level security;', t);
   end loop;

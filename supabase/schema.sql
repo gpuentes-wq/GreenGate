@@ -167,12 +167,36 @@ create table prestador_foto (
   created_at    timestamptz not null default now()
 );
 
+-- ── INTEGRANTE ── Una persona real que trabaja DENTRO de un prestador que es
+--    un equipo (no necesariamente una empresa formal). Un prestador unipersonal
+--    NO necesita filas acá: el prestador mismo ES la persona, como siempre.
+--    Cuando un prestador tiene integrantes, la identidad pública/comercial
+--    (nombre, puntaje, directorio) sigue siendo la del prestador, pero
+--    antecedentes e identidad — datos de una persona, no de un nombre
+--    comercial — se verifican por integrante (ver tabla verificacion).
+create table integrante (
+  id            uuid primary key default gen_random_uuid(),
+  prestador_id  uuid not null references prestador(id) on delete cascade,
+  nombre        text not null,
+  apellido      text,
+  documento     text,              -- DNI, para la identidad de ESA persona
+  activo        boolean not null default true,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+
 -- ── VERIFICACION ── SOLO ESTADO. Por decisión de diseño NO se almacena el
 --    documento sensible (antecedentes penales, póliza). Guardamos el estado,
 --    las fechas y quién validó. Reduce la exposición bajo la Ley 25.326.
+--    integrante_id: NULL = aplica al prestador entero (caso unipersonal, o
+--    seguro/ART compartido por todo el equipo). Con valor = es la
+--    verificación personal de ESE integrante (antecedentes/identidad en un
+--    equipo). prestador_id queda siempre completo (denormalizado a
+--    propósito) para no tener que pasar por integrante en cada consulta.
 create table verificacion (
   id                 uuid primary key default gen_random_uuid(),
   prestador_id       uuid not null references prestador(id) on delete cascade,
+  integrante_id      uuid references integrante(id) on delete cascade,
   barrio_id          uuid references barrio(id) on delete set null,  -- si es específica de un barrio
   tipo               tipo_verificacion not null,
   estado             estado_verificacion not null default 'pendiente',
@@ -276,6 +300,11 @@ create table perfil (
 -- ════════════════════════════════════════════════════════════════════════
 -- VISTA: DIRECTORIO DE PRESTADORES (corazón del MVP)
 -- ════════════════════════════════════════════════════════════════════════
+-- NOTA: a propósito NO incluye antecedentes_ok/seguro_ok/identidad_ok.
+-- Con integrantes, "¿está verificado?" ya no es un exists() simple (para un
+-- equipo hay que exigir que TODOS los integrantes activos estén al día) —
+-- ese cálculo es responsabilidad exclusiva de src/verificacion.ts, la
+-- única fuente de verdad, consumida igual por las tres pantallas.
 create view prestador_directorio as
 select
   p.id,
@@ -291,10 +320,7 @@ select
   p.condicion_fiscal,
   p.activo,
   (select round(avg(puntaje)::numeric, 2) from valoracion where prestador_id = p.id) as puntaje_promedio,
-  (select count(*) from valoracion where prestador_id = p.id)                        as cantidad_valoraciones,
-  exists (select 1 from verificacion where prestador_id = p.id and tipo = 'antecedentes_penales' and estado = 'verificado') as antecedentes_ok,
-  exists (select 1 from verificacion where prestador_id = p.id and tipo = 'seguro_art'           and estado = 'verificado') as seguro_ok,
-  exists (select 1 from verificacion where prestador_id = p.id and tipo = 'identidad'            and estado = 'verificado') as identidad_ok
+  (select count(*) from valoracion where prestador_id = p.id)                        as cantidad_valoraciones
 from prestador p;
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -310,7 +336,7 @@ $$ language plpgsql;
 do $$
 declare t text;
 begin
-  foreach t in array array['administracion','barrio','propietario','lote','prestador','verificacion','trabajo'] loop
+  foreach t in array array['administracion','barrio','propietario','lote','prestador','integrante','verificacion','trabajo'] loop
     execute format('create trigger trg_%1$s_updated before update on %1$I for each row execute function set_updated_at();', t);
   end loop;
 end $$;
@@ -322,7 +348,9 @@ create index on barrio(administracion_id);
 create index on lote(barrio_id);
 create index on lote(propietario_id);
 create index on prestador_foto(prestador_id);
+create index on integrante(prestador_id);
 create index on verificacion(prestador_id);
+create index on verificacion(integrante_id);
 create index on verificacion(barrio_id);
 create index on trabajo(prestador_id);
 create index on trabajo(lote_id);

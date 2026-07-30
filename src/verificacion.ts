@@ -15,6 +15,14 @@ export interface VerificacionRow {
   tipo: string
   estado: string
   fecha_vencimiento: string | null
+  // NULL = aplica al prestador entero (unipersonal, o seguro/ART compartido
+  // por el equipo). Con valor = verificación personal de ESE integrante.
+  integrante_id: string | null
+}
+
+export interface IntegranteRow {
+  id: string
+  activo: boolean
 }
 
 // Estados que el admin puede DECIDIR (no incluye 'vencido', que es derivado).
@@ -66,18 +74,37 @@ export function esVigente(estado: string, fechaVencimiento: string | null, hoy: 
 }
 
 // Insignias de un prestador a partir de sus verificaciones.
-export function badgesPrestador(verifs: VerificacionRow[], hoy: Date = new Date()) {
-  const vig = (tipo: string) => verifs.some((v) => v.tipo === tipo && esVigente(v.estado, v.fecha_vencimiento, hoy))
+//
+// Si el prestador tiene integrantes ACTIVOS (es un equipo), antecedentes e
+// identidad exigen que TODOS estén vigentes — son datos de cada persona, no
+// del nombre comercial. El seguro/ART siempre es a nivel del prestador
+// (integrante_id null): una póliza compartida por todo el equipo.
+// Si no tiene integrantes (unipersonal), se evalúa directo sobre el
+// prestador, exactamente como antes de que existiera esta noción de equipo.
+export function badgesPrestador(verifs: VerificacionRow[], integrantes: IntegranteRow[] = [], hoy: Date = new Date()) {
+  const activos = integrantes.filter((i) => i.activo)
+  const vigentePara = (tipo: string, integranteId: string | null) =>
+    verifs.some((v) => v.tipo === tipo && v.integrante_id === integranteId && esVigente(v.estado, v.fecha_vencimiento, hoy))
+
+  const seguro = vigentePara('seguro_art', null)
+
+  if (activos.length === 0) {
+    return {
+      antecedentes: vigentePara('antecedentes_penales', null),
+      seguro,
+      identidad: vigentePara('identidad', null),
+    }
+  }
   return {
-    antecedentes: vig('antecedentes_penales'),
-    seguro: vig('seguro_art'),
-    identidad: vig('identidad'),
+    antecedentes: activos.every((i) => vigentePara('antecedentes_penales', i.id)),
+    seguro,
+    identidad: activos.every((i) => vigentePara('identidad', i.id)),
   }
 }
 
-// ¿El prestador tiene las tres verificaciones vigentes?
-export function prestadorVerificado(verifs: VerificacionRow[], hoy: Date = new Date()): boolean {
-  const b = badgesPrestador(verifs, hoy)
+// ¿El prestador (unipersonal o equipo) tiene las tres verificaciones vigentes?
+export function prestadorVerificado(verifs: VerificacionRow[], integrantes: IntegranteRow[] = [], hoy: Date = new Date()): boolean {
+  const b = badgesPrestador(verifs, integrantes, hoy)
   return b.antecedentes && b.seguro && b.identidad
 }
 

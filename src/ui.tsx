@@ -34,6 +34,33 @@ export function Campo({ label, children }: { label: string; children: ReactNode 
   )
 }
 
+export function Tarjeta({
+  titulo,
+  valor,
+  acento,
+  onClick,
+}: {
+  titulo: string
+  valor: string | number
+  acento?: boolean
+  onClick?: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!onClick}
+      className={
+        'w-full rounded-lg border border-gray-200 bg-white p-4 text-left ' +
+        (onClick ? 'cursor-pointer transition hover:border-gg-green' : 'cursor-default')
+      }
+    >
+      <div className="text-sm text-gray-500">{titulo}</div>
+      <div className={'mt-1 text-2xl font-semibold ' + (acento ? 'text-amber-600' : 'text-gg-dark')}>{valor}</div>
+    </button>
+  )
+}
+
 export function Modal({ titulo, onClose, children }: { titulo: string; onClose: () => void; children: ReactNode }) {
   return (
     <div
