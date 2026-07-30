@@ -50,22 +50,23 @@ Se edita el código → se confirma (`commit`) y se sube (`push`) a GitHub → N
 
 ## Modelo de datos
 
-Vive dentro de Supabase (PostgreSQL): **14 tablas + 1 vista**. El lenguaje del dominio está en español.
+Vive dentro de Supabase (PostgreSQL): **15 tablas + 1 vista**. El lenguaje del dominio está en español.
 
 **Entidades principales:**
 - `administracion` — el cliente B2B (la administradora del barrio).
 - `barrio` — cada barrio/country (una administración gestiona varios).
 - `lote` — la unidad funcional dentro de un barrio.
 - `propietario` — el vecino (demanda).
-- `prestador` — la oferta (jardineros; el campo `tipo_servicio` deja la puerta abierta a otros rubros).
-- `verificacion` — estado de la documentación del prestador (antecedentes, seguro/ART, identidad).
+- `prestador` — la oferta (jardineros; el campo `tipo_servicio` deja la puerta abierta a otros rubros). Puede ser una persona sola o un equipo.
+- `integrante` — cada persona real de un prestador-equipo. Antecedentes e identidad se verifican por persona; el seguro queda compartido a nivel del prestador. Un prestador unipersonal no usa esta tabla.
+- `verificacion` — estado de la documentación (del prestador entero, o de un integrante puntual).
 - `trabajo` — cada servicio realizado (precio, método de pago, comisión de la plataforma).
 - `valoracion` — reseña de un trabajo (de acá se calcula el puntaje).
 - `solicitud` — pedido de contacto de un propietario a un prestador.
 
 **Tablas de apoyo:** `prestador_servicio` (especialidades), `prestador_barrio` (habilitación por barrio), `prestador_foto` (portfolio), `ingreso` (trazabilidad de accesos, Fase 2) y `perfil` (vínculo con el login, a futuro).
 
-**Vista `prestador_directorio`:** calcula, para cada prestador, el puntaje promedio, la cantidad de reseñas y las insignias de verificación. Es el corazón del directorio.
+**Vista `prestador_directorio`:** calcula, para cada prestador, el puntaje promedio y la cantidad de reseñas. Las insignias de verificación (antecedentes/seguro/identidad) **no** viven en esta vista — las calcula `src/verificacion.ts` en el frontend, porque para un equipo hace falta cruzar los datos de cada integrante, algo que un `exists()` simple en SQL no puede expresar bien sin arriesgar una segunda fuente de verdad.
 
 Detalle completo del esquema: [`supabase/schema.sql`](../supabase/schema.sql) · explicación en lenguaje simple: [`docs/modelo-de-datos.md`](modelo-de-datos.md).
 
@@ -95,9 +96,10 @@ En desarrollo local viven en un archivo `.env` (ignorado por Git). En producció
 greengate/
 ├── src/                    App React (vistas, componentes, cliente Supabase)
 ├── supabase/
-│   ├── schema.sql          Esquema de la base (14 tablas + vista)
+│   ├── schema.sql          Esquema de la base (15 tablas + vista)
 │   ├── seed.sql            Datos de ejemplo (barrios de zona norte)
 │   ├── migracion-solicitudes.sql
+│   ├── migracion-integrantes.sql
 │   ├── rls-dev.sql         Desactiva RLS para el piloto
 │   └── policies.sql        Políticas de seguridad (borrador, para el login)
 ├── docs/
