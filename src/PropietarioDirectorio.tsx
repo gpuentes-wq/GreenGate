@@ -12,7 +12,6 @@ export default function PropietarioDirectorio() {
   const [prestadores, setPrestadores] = useState<PrestadorDirectorio[]>([])
   const [especialidades, setEspecialidades] = useState<Especialidad[]>([])
   const [extras, setExtras] = useState<Record<string, Extra>>({})
-  const [fotos, setFotos] = useState<Record<string, string[]>>({})
   const [verifs, setVerifs] = useState<Record<string, VerificacionRow[]>>({})
   const [integrantes, setIntegrantes] = useState<Record<string, IntegranteRow[]>>({})
   const [loading, setLoading] = useState(true)
@@ -20,17 +19,15 @@ export default function PropietarioDirectorio() {
   const [soloVerificados, setSoloVerificados] = useState(false)
   const [enviados, setEnviados] = useState<Record<string, boolean>>({})
   const [contactar, setContactar] = useState<{ id: string; nombre: string } | null>(null)
-  const [lightbox, setLightbox] = useState<{ fotos: string[]; i: number } | null>(null)
 
   useEffect(() => {
     async function cargar() {
       setLoading(true)
       setError(null)
-      const [p, e, x, f, v, i] = await Promise.all([
+      const [p, e, x, v, i] = await Promise.all([
         supabase.from('prestador_directorio').select('*'),
         supabase.from('prestador_servicio').select('prestador_id,tipo,tarifa'),
         supabase.from('prestador').select('id,tarifa_referencia,anios_experiencia'),
-        supabase.from('prestador_foto').select('prestador_id,url,orden').order('orden'),
         supabase.from('verificacion').select('prestador_id,integrante_id,tipo,estado,fecha_vencimiento'),
         supabase.from('integrante').select('id,prestador_id,activo'),
       ])
@@ -46,13 +43,6 @@ export default function PropietarioDirectorio() {
       const filas = (x.data as Array<{ id: string; tarifa_referencia: number | null; anios_experiencia: number | null }>) ?? []
       for (const r of filas) map[r.id] = { tarifa: r.tarifa_referencia, experiencia: r.anios_experiencia }
       setExtras(map)
-      const fmap: Record<string, string[]> = {}
-      const frows = (f.data as Array<{ prestador_id: string; url: string; orden: number }>) ?? []
-      for (const r of frows) {
-        if (!fmap[r.prestador_id]) fmap[r.prestador_id] = []
-        fmap[r.prestador_id].push(r.url)
-      }
-      setFotos(fmap)
       const vmap: Record<string, VerificacionRow[]> = {}
       const vrows = (v.data as Array<{ prestador_id: string } & VerificacionRow>) ?? []
       for (const r of vrows) {
@@ -127,7 +117,6 @@ export default function PropietarioDirectorio() {
             const verificado = badges.antecedentes && badges.seguro && badges.identidad
             const esp = espPorPrestador[p.id] ?? []
             const ex = extras[p.id]
-            const fotosP = fotos[p.id] ?? []
             return (
               <div key={p.id} className="flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-2">
@@ -165,24 +154,6 @@ export default function PropietarioDirectorio() {
                       <span key={t} className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
                         {servicioLabel(t)}
                       </span>
-                    ))}
-                  </div>
-                )}
-
-                {fotosP.length > 0 && (
-                  <div className="mt-3 flex gap-2 overflow-x-auto">
-                    {fotosP.map((url, i) => (
-                      <img
-                        key={i}
-                        src={url}
-                        alt="Trabajo anterior"
-                        loading="lazy"
-                        onClick={() => setLightbox({ fotos: fotosP, i })}
-                        onError={(ev) => {
-                          ev.currentTarget.style.display = 'none'
-                        }}
-                        className="h-16 w-24 shrink-0 cursor-pointer rounded-lg object-cover transition hover:opacity-80"
-                      />
                     ))}
                   </div>
                 )}
@@ -240,87 +211,6 @@ export default function PropietarioDirectorio() {
           }}
         />
       )}
-
-      {lightbox && (
-        <Lightbox
-          fotos={lightbox.fotos}
-          i={lightbox.i}
-          onClose={() => setLightbox(null)}
-          onIndex={(i) => setLightbox((lb) => (lb ? { fotos: lb.fotos, i } : null))}
-        />
-      )}
     </main>
-  )
-}
-
-function Lightbox({
-  fotos,
-  i,
-  onClose,
-  onIndex,
-}: {
-  fotos: string[]
-  i: number
-  onClose: () => void
-  onIndex: (i: number) => void
-}) {
-  const prev = () => onIndex((i - 1 + fotos.length) % fotos.length)
-  const next = () => onIndex((i + 1) % fotos.length)
-
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-      else if (e.key === 'ArrowLeft' && fotos.length > 1) prev()
-      else if (e.key === 'ArrowRight' && fotos.length > 1) next()
-    }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  })
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
-      <button
-        onClick={onClose}
-        aria-label="Cerrar"
-        className="absolute right-4 top-4 text-3xl leading-none text-white/80 hover:text-white"
-      >
-        ✕
-      </button>
-      {fotos.length > 1 && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            prev()
-          }}
-          aria-label="Anterior"
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-4xl text-white/80 hover:text-white"
-        >
-          ‹
-        </button>
-      )}
-      <img
-        src={fotos[i]}
-        alt="Trabajo anterior"
-        onClick={(e) => e.stopPropagation()}
-        className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain shadow-2xl"
-      />
-      {fotos.length > 1 && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            next()
-          }}
-          aria-label="Siguiente"
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-4xl text-white/80 hover:text-white"
-        >
-          ›
-        </button>
-      )}
-      {fotos.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-white/70">
-          {i + 1} / {fotos.length}
-        </div>
-      )}
-    </div>
   )
 }
