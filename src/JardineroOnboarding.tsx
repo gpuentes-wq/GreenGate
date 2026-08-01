@@ -306,6 +306,8 @@ export default function JardineroOnboarding() {
         <SolicitudesPanel prestadorId={editId} />
       ) : (
         <>
+          {!editId && <PanelPreview />}
+
           {okEditar && (
             <div className="mb-6 rounded-lg border border-gg-light bg-gg-light/50 p-3 text-sm font-medium text-gg-dark">
               ✓ Cambios guardados.
@@ -465,6 +467,36 @@ export default function JardineroOnboarding() {
         </>
       )}
     </main>
+  )
+}
+
+// Vista previa del panel que va a tener el jardinero apenas se sume, con
+// datos de ejemplo (no reales). Se muestra antes de completar el alta,
+// para que sepa qué va a ganar antes de tener que llenar el formulario.
+function PanelPreview() {
+  return (
+    <div className="mb-6 rounded-xl border border-dashed border-gray-300 p-4">
+      <span className="inline-block rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+        Vista previa · así se va a ver tu panel
+      </span>
+      <div className="mt-3 grid grid-cols-3 gap-3">
+        <div className="rounded-lg bg-gray-50 p-3">
+          <div className="text-xs text-gray-400">Tu puntaje</div>
+          <div className="text-lg font-semibold text-gray-400">★ 4.8</div>
+        </div>
+        <div className="rounded-lg bg-gray-50 p-3">
+          <div className="text-xs text-gray-400">Clientes activos</div>
+          <div className="text-lg font-semibold text-gray-400">6</div>
+        </div>
+        <div className="rounded-lg bg-gray-50 p-3">
+          <div className="text-xs text-gray-400">Facturado este mes</div>
+          <div className="text-lg font-semibold text-gray-400">$190.000</div>
+        </div>
+      </div>
+      <p className="mt-3 text-xs text-gray-500">
+        Vas a ver tus solicitudes, tu reputación y lo que facturás por la app, de un vistazo. Completá tus datos abajo para empezar.
+      </p>
+    </div>
   )
 }
 

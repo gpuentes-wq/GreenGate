@@ -3,14 +3,31 @@ import { supabase } from './lib/supabase'
 import { servicioLabel } from './labels'
 import { Tarjeta, EmptyState } from './ui'
 import { VerificacionesResumen } from './VerificacionesResumen'
+import { alertaVencimiento } from './verificacion'
 
 type BarrioOperativo = { nombre: string; habilitado: boolean }
 type ServicioPublicado = { tipo: string; tarifa: number | null; principal: boolean }
+type Alerta = { texto: string; vencido: boolean }
+type IntegranteNombre = { id: string; nombre: string; apellido: string | null }
+
+const TIPO_LABEL_PROPIO: Record<string, string> = {
+  antecedentes_penales: 'Tus antecedentes',
+  seguro_art: 'Tu seguro/ART',
+  identidad: 'Tu identidad',
+}
+const TIPO_LABEL_PERSONA: Record<string, string> = {
+  antecedentes_penales: 'Antecedentes de',
+  seguro_art: 'Seguro/ART de',
+  identidad: 'Identidad de',
+}
 
 // Panel/dashboard del jardinero: lo primero que ve al elegir su perfil.
-// Todo lo que le agrega valor segun el Value Proposition Canvas (Módulo #4):
-// dónde opera, cuántos clientes activos tiene, sus solicitudes, lo que
-// factura por la app y sus servicios publicados con precio.
+// Ordenado por urgencia, no como una lista plana de tarjetas iguales:
+// 1) Necesita tu atención (solicitudes + vencimientos) — lo único que
+//    cambia sesión a sesión y exige una acción.
+// 2) Tu negocio (puntaje, clientes activos, facturado) — salud general.
+// 3) Tu perfil público (equipo, barrios, servicios y precios) — cambia
+//    poco, es más referencia que algo para chequear cada vez.
 export function JardineroPanel({
   prestadorId,
   onVerSolicitudes,
@@ -27,7 +44,10 @@ export function JardineroPanel({
   const [pendientes, setPendientes] = useState(0)
   const [clientesActivos, setClientesActivos] = useState(0)
   const [facturadoMes, setFacturadoMes] = useState(0)
+  const [puntajePromedio, setPuntajePromedio] = useState<number | null>(null)
+  const [cantidadValoraciones, setCantidadValoraciones] = useState(0)
   const [integrantesActivos, setIntegrantesActivos] = useState(0)
+  const [alertas, setAlertas] = useState<Alerta[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -36,15 +56,17 @@ export function JardineroPanel({
       setLoading(true)
       setError(null)
 
-      const [pbRes, psRes, prRes, solRes, trabRes, integRes] = await Promise.all([
+      const [pbRes, psRes, prRes, dirRes, solRes, trabRes, integRes, verifRes] = await Promise.all([
         supabase.from('prestador_barrio').select('barrio_id,habilitado').eq('prestador_id', prestadorId),
         supabase.from('prestador_servicio').select('tipo,tarifa').eq('prestador_id', prestadorId),
         supabase.from('prestador').select('tipo_servicio_principal,tarifa_referencia').eq('id', prestadorId).single(),
+        supabase.from('prestador_directorio').select('puntaje_promedio,cantidad_valoraciones').eq('id', prestadorId).single(),
         supabase.from('solicitud').select('estado').eq('prestador_id', prestadorId),
         supabase.from('trabajo').select('monto,fecha,estado,propietario_id').eq('prestador_id', prestadorId),
-        supabase.from('integrante').select('id').eq('prestador_id', prestadorId).eq('activo', true),
+        supabase.from('integrante').select('id,nombre,apellido').eq('prestador_id', prestadorId).eq('activo', true),
+        supabase.from('verificacion').select('tipo,estado,fecha_vencimiento,integrante_id').eq('prestador_id', prestadorId),
       ])
-      const err = pbRes.error || psRes.error || prRes.error || solRes.error || trabRes.error || integRes.error
+      const err = pbRes.error || psRes.error || prRes.error || solRes.error || trabRes.error || integRes.error || verifRes.error
       if (err) {
         setError(err.message)
         setLoading(false)
@@ -61,7 +83,13 @@ export function JardineroPanel({
       }
       setBarrios(pbRows.map((r) => ({ nombre: nombrePorBarrio.get(r.barrio_id) ?? 'Barrio', habilitado: r.habilitado })))
 
-      setIntegrantesActivos(((integRes.data as Array<{ id: string }>) ?? []).length)
+      const integrantes = (integRes.data as IntegranteNombre[]) ?? []
+      setIntegrantesActivos(integrantes.length)
+
+      // Puntaje: viene calculado de la vista, a partir de las reseñas reales.
+      const dir = dirRes.data as { puntaje_promedio: number | null; cantidad_valoraciones: number } | null
+      setPuntajePromedio(dir?.puntaje_promedio ?? null)
+      setCantidadValoraciones(dir?.cantidad_valoraciones ?? 0)
 
       // Servicios publicados: el principal (con su tarifa) + las especialidades.
       const principal = prRes.data as { tipo_servicio_principal: string; tarifa_referencia: number | null } | null
@@ -90,6 +118,20 @@ export function JardineroPanel({
         .reduce((acc, t) => acc + (t.monto ?? 0), 0)
       setFacturadoMes(facturado)
 
+      // Alertas de documentación (propias, y de cada integrante si es un equipo).
+      const nombrePorIntegrante = new Map(integrantes.map((i) => [i.id, `${i.nombre}${i.apellido ? ' ' + i.apellido : ''}`]))
+      const verifRows = (verifRes.data as Array<{ tipo: string; estado: string; fecha_vencimiento: string | null; integrante_id: string | null }>) ?? []
+      const listaAlertas: Alerta[] = []
+      for (const v of verifRows) {
+        const al = alertaVencimiento(v.estado, v.fecha_vencimiento)
+        if (!al) continue
+        const persona = v.integrante_id ? nombrePorIntegrante.get(v.integrante_id) : null
+        const etiqueta = persona ? `${TIPO_LABEL_PERSONA[v.tipo] ?? v.tipo} ${persona}` : TIPO_LABEL_PROPIO[v.tipo] ?? v.tipo
+        listaAlertas.push({ texto: `${etiqueta} ${al.texto}`, vencido: al.vencido })
+      }
+      listaAlertas.sort((a, b) => Number(b.vencido) - Number(a.vencido))
+      setAlertas(listaAlertas)
+
       setLoading(false)
     }
     cargar()
@@ -98,80 +140,116 @@ export function JardineroPanel({
   if (loading) return <p className="text-gray-500">Cargando…</p>
   if (error) return <p className="text-sm text-red-600">No se pudo cargar tu panel: {error}</p>
 
+  const todoAlDia = pendientes === 0 && alertas.length === 0
+
   return (
-    <div className="space-y-8">
-      <VerificacionesResumen prestadorId={prestadorId} />
-
-      <p className="text-sm text-gray-500">
-        {integrantesActivos > 0
-          ? `👥 Trabajás en equipo con ${integrantesActivos} persona${integrantesActivos === 1 ? '' : 's'}.`
-          : '¿Trabajás con alguien más?'}{' '}
-        <button type="button" onClick={onVerEquipo} className="font-medium text-gg-green hover:underline">
-          Gestionar equipo →
-        </button>
-      </p>
-
-      <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Tarjeta titulo="Barrios donde operás" valor={barrios.length} />
-        <Tarjeta titulo="Clientes activos" valor={clientesActivos} />
-        <Tarjeta titulo="Solicitudes pendientes" valor={pendientes} acento={pendientes > 0} onClick={onVerSolicitudes} />
-        <Tarjeta titulo="Facturado este mes" valor={`$${facturadoMes.toLocaleString('es-AR')}`} />
+    <div className="space-y-6">
+      <section className={'rounded-xl p-4 ' + (todoAlDia ? 'bg-gg-light/50' : 'bg-amber-50')}>
+        <h3 className={'mb-2 text-xs font-semibold ' + (todoAlDia ? 'text-gg-dark' : 'text-amber-800')}>Necesita tu atención</h3>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm text-gray-800">
+            {pendientes > 0
+              ? `${pendientes} solicitud${pendientes === 1 ? '' : 'es'} esperando respuesta`
+              : 'No tenés solicitudes pendientes'}
+          </span>
+          {pendientes > 0 && (
+            <button
+              onClick={onVerSolicitudes}
+              className="shrink-0 rounded-lg border border-amber-400 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
+            >
+              Ver
+            </button>
+          )}
+        </div>
+        {alertas.length > 0 && (
+          <ul className="mt-2 space-y-1">
+            {alertas.map((a, i) => (
+              <li key={i} className={'text-sm ' + (a.vencido ? 'text-red-700' : 'text-amber-800')}>
+                ⚠ {a.texto}
+              </li>
+            ))}
+          </ul>
+        )}
+        {todoAlDia && <p className="mt-1 text-sm text-gray-500">Todo al día.</p>}
       </section>
 
       <section>
-        <h3 className="mb-3 text-sm font-semibold text-gg-dark">Barrios donde operás</h3>
-        {barrios.length === 0 ? (
-          <EmptyState>
-            Todavía no elegiste ningún barrio. Sumalo desde <button onClick={onEditarPerfil} className="font-medium text-gg-green hover:underline">tu perfil</button>.
-          </EmptyState>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {barrios.map((b, i) => (
-              <span
-                key={i}
-                className={
-                  'rounded-full px-3 py-1 text-sm ' + (b.habilitado ? 'bg-gg-light text-gg-dark' : 'bg-amber-50 text-amber-700')
-                }
-              >
-                {b.nombre} · {b.habilitado ? 'habilitado' : 'pendiente de validación'}
-              </span>
-            ))}
-          </div>
-        )}
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Tu negocio</h3>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <Tarjeta titulo="Tu puntaje" valor={puntajePromedio != null ? `★ ${puntajePromedio} (${cantidadValoraciones})` : 'Sin reseñas aún'} />
+          <Tarjeta titulo="Clientes activos" valor={clientesActivos} />
+          <Tarjeta titulo="Facturado este mes" valor={`$${facturadoMes.toLocaleString('es-AR')}`} />
+        </div>
       </section>
 
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gg-dark">Tus servicios y precios</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Tu perfil público</h3>
           <button type="button" onClick={onEditarPerfil} className="text-sm font-medium text-gg-green hover:underline">
             Editar →
           </button>
         </div>
-        {servicios.length === 0 ? (
-          <EmptyState>Todavía no tenés servicios publicados.</EmptyState>
-        ) : (
-          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-            <table className="w-full text-sm">
-              <tbody>
-                {servicios.map((s, i) => (
-                  <tr key={i} className="border-t border-gray-100 first:border-t-0">
-                    <td className="px-4 py-2 text-gray-800">
-                      {servicioLabel(s.tipo)}
-                      {s.principal && <span className="ml-2 text-xs text-gray-400">(principal)</span>}
-                    </td>
-                    <td className="px-4 py-2 text-right text-gray-600">
-                      {s.tarifa != null ? `desde $${s.tarifa.toLocaleString('es-AR')}` : 'sin precio cargado'}
-                    </td>
-                  </tr>
+        <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-4">
+          <p className="text-sm text-gray-500">
+            {integrantesActivos > 0
+              ? `👥 Trabajás en equipo con ${integrantesActivos} persona${integrantesActivos === 1 ? '' : 's'}.`
+              : '¿Trabajás con alguien más?'}{' '}
+            <button type="button" onClick={onVerEquipo} className="font-medium text-gg-green hover:underline">
+              Gestionar equipo →
+            </button>
+          </p>
+
+          <div>
+            <div className="mb-2 text-sm font-medium text-gray-700">Barrios donde operás</div>
+            {barrios.length === 0 ? (
+              <EmptyState>Todavía no elegiste ningún barrio. Sumalo desde tu perfil.</EmptyState>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {barrios.map((b, i) => (
+                  <span
+                    key={i}
+                    className={
+                      'rounded-full px-3 py-1 text-sm ' + (b.habilitado ? 'bg-gg-light text-gg-dark' : 'bg-amber-50 text-amber-700')
+                    }
+                  >
+                    {b.nombre} · {b.habilitado ? 'habilitado' : 'pendiente de validación'}
+                  </span>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            )}
           </div>
-        )}
+
+          <div>
+            <div className="mb-2 text-sm font-medium text-gray-700">Tus servicios y precios</div>
+            {servicios.length === 0 ? (
+              <EmptyState>Todavía no tenés servicios publicados.</EmptyState>
+            ) : (
+              <div className="overflow-hidden rounded-lg border border-gray-100">
+                <table className="w-full text-sm">
+                  <tbody>
+                    {servicios.map((s, i) => (
+                      <tr key={i} className="border-t border-gray-100 first:border-t-0">
+                        <td className="px-3 py-2 text-gray-800">
+                          {servicioLabel(s.tipo)}
+                          {s.principal && <span className="ml-2 text-xs text-gray-400">(principal)</span>}
+                        </td>
+                        <td className="px-3 py-2 text-right text-gray-600">
+                          {s.tarifa != null ? `desde $${s.tarifa.toLocaleString('es-AR')}` : 'sin precio cargado'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <VerificacionesResumen prestadorId={prestadorId} />
+        </div>
       </section>
 
       <section>
-        <h3 className="mb-3 text-sm font-semibold text-gg-dark">Próximamente</h3>
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Próximamente</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Placeholder
             icono="💳"
