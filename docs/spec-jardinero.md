@@ -8,12 +8,13 @@ Documento de referencia para el desarrollo de las pantallas del rol jardinero en
 
 - **"Necesita tu atención"** (solicitudes pendientes + vencimientos de documentación) — ya construido tal cual en `JardineroPanel.tsx`.
 - **"Tu negocio"** — ya construido, pero cambian las métricas: hoy muestra puntaje, clientes activos y *facturado este mes*. Pasa a mostrar **puntaje de reseñas, clientes activos, presupuestos realizados y tus servicios activos** (se reemplaza "facturado este mes" por las dos nuevas).
+- **Acceso rápido al tilde de urgencia**: como la disponibilidad puede cambiar día a día, conviene que "Abierto a servicios de urgencia" (ver pantalla "Mi perfil") esté prendible/apagable también desde acá, no solo enterrado en el perfil.
 - **"Próximamente"** — ya existe la sección con 2 placeholders (pagos recibidos, mapa de clientes). Se suman 6 más: **asesor legal, seguros, monotributo, capacitaciones, créditos, compra de herramientas.**
 
 ### 2. Mi perfil
 
 - Datos personales, datos fiscales (opcional) — ya existen los campos en `JardineroOnboarding.tsx`.
-- **Tu servicio**: selección de especialidades (ya existe) + para cada una, la modalidad que ofrece — **Mensual/Recurrente, Puntual/por única vez, Urgencia** — mismas 3 opciones que en la pantalla "Solicitud de servicio" del propietario, para que el matching funcione (ver `spec-propietario.md`).
+- **Tu servicio**: selección de especialidades (ya existe), con precios de referencia por servicio (ya existen los campos). Se suma un solo tilde, **"Abierto a servicios de urgencia"**, aplicable únicamente a jardinería general (el resto de las categorías se cotiza de la forma normal, sin este atajo). Lo puede tildar tanto un jardinero de cartera que tiene un hueco libre ese día/semana, como alguien que se dedica solo a atender urgencias — incluso de forma estacional.
 - **Seleccionar barrio(s) donde quiere trabajar** — hoy el barrio se elige una sola vez al crear el perfil y no es editable ni múltiple. Pasa a ser una selección editable desde "Mi perfil", y probablemente múltiple (la tabla `prestador_barrio` ya está pensada para eso).
 - **Validación de documentación según barrio**: el jardinero sube/declara documentación; la aprobación real la hace administración desde su propio módulo — ya es consistente con cómo está modelado hoy (`prestador_barrio.habilitado` arranca en `false`).
 
@@ -39,7 +40,7 @@ Detalle de solicitudes de presupuesto/trabajo con su estado correspondiente. Se 
 
 ## Cambio de modelo de datos necesario
 
-- **`prestador_servicio`**: sumar un campo de modalidades (array de `mensual_recurrente` / `puntual` / `urgencia`) por cada especialidad — mismo campo del que se habló al definir el onboarding, pendiente de migración.
+- **`prestador`**: sumar un campo `disponible_urgencia` (boolean) — el tilde de "Abierto a servicios de urgencia", simple y a nivel de todo el perfil (no por especialidad, ya que solo aplica a jardinería general).
 - **"Presupuestos realizados"** (métrica nueva): se cuenta a partir de `solicitud` — falta definir si es toda solicitud respondida, o solo las que llegaron a tener un monto cotizado (una vez extendida `solicitud` según `spec-propietario.md`).
 - **"Servicios activos"** (métrica nueva): cuenta de especialidades publicadas — el dato ya existe en `prestador_servicio`, es una query nueva, no una tabla nueva.
 - **`prestador`**: sumar un campo de origen del alta (autoregistro / alta por administración / recomendado por propietario), para saber en qué punto del proceso está cada perfil.

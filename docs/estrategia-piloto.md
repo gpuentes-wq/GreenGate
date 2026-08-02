@@ -97,6 +97,8 @@ Propuesta: en la pantalla de propietarios, poder pedir un servicio de urgencia (
 - **Punto de atención**: en una urgencia hay menos tiempo para comparar reseñas con calma, así que probablemente convenga limitarlo a prestadores ya verificados y con una vara de calificación más alta, para compensar la menor chance de elegir con calma.
 - Es una funcionalidad de mayor alcance (necesita estado de disponibilidad en vivo) — buen tema para preguntar directamente en las entrevistas del piloto ("¿te serviría un servicio de urgencia?") antes de construirlo.
 
+**Diseño ya resuelto y simplificado** (ver `spec-jardinero.md` y `spec-propietario.md`): en vez de una modalidad por cada categoría de servicio, queda un solo booleano (`prestador.disponible_urgencia`), aplicable únicamente a jardinería general — el resto de las categorías se cotiza de la forma normal. Confirma los dos perfiles de quién la ofrece: un jardinero de cartera con un hueco libre ese día/semana, o alguien que se dedica solo a atender urgencias, incluso de forma estacional.
+
 ### Chat conversacional por rol (puerta de entrada, no reemplazo de navegación)
 
 Punto de partida: ya existe una primera versión del MVP con las tablas definidas, los 3 roles que interactúan (propietario, jardinero, administración), la función de cada uno y una idea de qué datos ve cada perfil. La propuesta es que, al entrar según el rol, se abra un chat conversacional que ayude a interactuar y lleve al usuario a las secciones que correspondan.

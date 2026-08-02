@@ -12,7 +12,7 @@ Este documento se enfoca en el **panel de un barrio**, que es el que falta const
 ## Contenido del panel de un barrio
 
 - **Documentación que requiere atención** — ya existe como funcionalidad (alertas de vencimiento en `AdminPanel.tsx`); se reutiliza tal cual, scopeada a este barrio.
-- **Resumen**: prestadores totales, pendientes de validación (ya existen como estadísticas, hoy a nivel multi-barrio) + **cantidad de servicios dados de alta, con filtro por recurrencia** (Mensual/Recurrente, Puntual, Urgencia) — esto último es nuevo, y depende del campo de modalidad que se suma a `prestador_servicio` (ver `spec-jardinero.md`).
+- **Resumen**: prestadores totales, pendientes de validación (ya existen como estadísticas, hoy a nivel multi-barrio) + **cantidad de prestadores disponibles para urgencia en este momento** — esto último es nuevo, y depende del campo `disponible_urgencia` que se suma a `prestador` (ver `spec-jardinero.md`).
 - **Listado de prestadores**: estado de verificación, puntaje de reseñas, y **acción de validar por cada requisito por separado** (antecedentes / seguro / identidad) — ya existe (`ValidarPrestadorModal`), incluyendo el caso de equipos (antecedentes e identidad se validan persona por persona; el seguro es compartido). No hay gap acá, se reutiliza.
 - **Carga masiva de prestadores vía CSV/XLS** — funcionalidad nueva. Permite subir un archivo con un listado de prestadores y su estado, en vez de cargarlos uno por uno.
 - **Agregar prestador**: dos caminos —
@@ -26,7 +26,7 @@ Este documento se enfoca en el **panel de un barrio**, que es el que falta const
 
 ## Cambio de modelo de datos necesario
 
-- **`prestador_servicio.modalidades`**: mismo campo ya identificado en `spec-jardinero.md`, necesario acá también para el filtro por recurrencia del resumen.
+- **`prestador.disponible_urgencia`**: mismo campo ya identificado en `spec-jardinero.md`, necesario acá también para la estadística de disponibles para urgencia del resumen.
 - **`prestador.origen`**: mismo campo ya identificado en `spec-jardinero.md`, para diferenciar altas por autoregistro / administración / recomendación de propietario.
 - **Carga masiva CSV/XLS**: falta definir el formato del archivo (columnas esperadas) y cómo se mapea a `prestador` + `prestador_servicio` + `verificacion` — no es solo una tabla nueva, es un proceso de importación a diseñar.
 

@@ -10,14 +10,16 @@ El login (Supabase Auth) no está incluido en este MVP todavía, pero al impleme
 
 ### 1. Solicitud de servicio
 
-- Selección de **recurrencia**, como primer filtro rápido: **Mensual/Recurrente**, **Puntual/por única vez**, **Urgencia**.
 - Cuadro de texto libre para describir la necesidad → dispara la IA, que preselecciona los prestadores disponibles (se ven en la pantalla siguiente).
+- **Acceso rápido a "Urgencia"**, separado del cuadro de texto: un atajo directo a los jardineros de jardinería general marcados como disponibles para urgencia ahora, sin pasar por el flujo completo de descripción. Ver `spec-jardinero.md` (el tilde "Abierto a servicios de urgencia") y la sección "Diferencial: servicio de urgencia" en `estrategia-piloto.md`.
+
+> La recurrencia (si el trabajo termina siendo puntual o se vuelve mensual) ya no se elige de antemano acá — se define recién en la conversación de cotización, entre propietario y jardinero (ver pantalla 5).
 
 > Esta descripción inicial es liviana a propósito: sirve para que la IA clasifique el tipo de servicio y arme la lista de candidatos, no busca ser exhaustiva todavía. Es el mismo pedido que se termina de completar en la pantalla 4 (no son dos descripciones independientes) — así el propietario no tiene que responder todo el detalle antes de saber quién está disponible en su barrio.
 
 ### 2. Listado de jardineros
 
-- Listado de prestadores filtrado por lo elegido en la pantalla anterior (barrio + recurrencia).
+- Listado de prestadores filtrado por barrio.
 - Buscador por nombre y/o tipo de servicio.
 - Muestra por cada prestador: nombre, reseña (puntaje resumen), tipos de servicio, estado de verificación.
 - **Si no encuentra a quien busca**: opción de recomendar/proponer que se incorpore un nuevo proveedor a la plataforma (queda como funcionalidad prevista en esta pantalla; cómo se comunica ese lead se define más adelante).
@@ -59,16 +61,16 @@ Es la interacción en cuadro de diálogo entre el propietario y la IA para defin
 
 ## Cambio de modelo de datos necesario
 
-Hoy la tabla `solicitud` (`supabase/schema.sql`) es **1 propietario → 1 prestador**: no tiene monto, no tiene recurrencia/urgencia, no tiene fotos. El flujo de arriba necesita **1 pedido → N prestadores elegidos → N presupuestos comparables → 1 elegido → 1 trabajo confirmado**. Esto implica separar el concepto en dos:
+Hoy la tabla `solicitud` (`supabase/schema.sql`) es **1 propietario → 1 prestador**: no tiene monto, no tiene fotos. El flujo de arriba necesita **1 pedido → N prestadores elegidos → N presupuestos comparables → 1 elegido → 1 trabajo confirmado**. Esto implica separar el concepto en dos:
 
-- **`pedido` (tabla nueva)**: la necesidad estructurada que arma la pantalla 1 + 4. Campos propuestos: `propietario_id`, `barrio_id`, `lote_id`, `tipo_servicio`, `recurrencia` (mensual/recurrente, puntual, urgencia), `descripcion`, `detalle_estructurado` (jsonb — lo que arma la IA según el esquema de `catalogo-servicios.md`: alcance, tamaño, altura, etc.), `fotos_urls`, `created_at`.
+- **`pedido` (tabla nueva)**: la necesidad estructurada que arma la pantalla 1 + 4. Campos propuestos: `propietario_id`, `barrio_id`, `lote_id`, `tipo_servicio`, `descripcion`, `detalle_estructurado` (jsonb — lo que arma la IA según el esquema de `catalogo-servicios.md`: alcance, tamaño, altura, etc.), `fotos_urls`, `created_at`. (No lleva recurrencia — eso se define recién en la cotización, no en el pedido inicial.)
 - **`solicitud` (se extiende)**: pasa a representar la cotización de *cada* prestador elegido para un pedido. Se le suma `pedido_id` (nueva referencia) y `monto_presupuestado`. Mantiene el resto de sus campos actuales (`estado`, `mensaje`, `contacto_nombre`, `contacto_celular`).
 
 Esto conecta directo con la comparación multi-jardinero ya diseñada en `estrategia-piloto.md`.
 
 ## Conexión con lo ya construido
 
-- **Pantalla 2** reutiliza `PropietarioDirectorio.tsx`: hoy filtra por "Solo verificados" y no tiene filtro por barrio ni por recurrencia, ni buscador por nombre. También hay que cambiar el propósito del botón — hoy es "Contactar" directo (abre `ContactarModal`), y pasaría a ser "Seleccionar para pedir presupuesto" con selección múltiple.
+- **Pantalla 2** reutiliza `PropietarioDirectorio.tsx`: hoy filtra por "Solo verificados" y no tiene filtro por barrio, ni buscador por nombre. También hay que cambiar el propósito del botón — hoy es "Contactar" directo (abre `ContactarModal`), y pasaría a ser "Seleccionar para pedir presupuesto" con selección múltiple.
 - **Pantalla 3** es una ampliación de la tarjeta que ya existe en el listado — pantalla nueva, pero reutiliza los mismos datos (`verificacion.ts`, vista `prestador_directorio`).
 - **Pantalla 5** se apoya en `trabajo` (ya tiene `monto`, `metodo_pago` — incluye `efectivo` y `transferencia` — `estado_pago`, `frecuencia`) y `valoracion` (ya soporta reseña multi-dimensión + fotos). El **cierre bilateral** necesita un ajuste: hoy `estado_trabajo` es `solicitado / confirmado / realizado / cancelado`, no distingue "cerrado por propietario" de "cerrado por jardinero" — falta definir cómo modelarlo (ver pendientes).
 
