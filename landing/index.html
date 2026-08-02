@@ -125,17 +125,21 @@ section{padding:88px 0}
 .avatar{width:52px;height:52px;border-radius:12px;background:var(--fondo);border:1px solid var(--borde);display:grid;place-items:center;font-weight:700;color:var(--verde-profundo);font-size:1.05rem;flex:0 0 auto}
 .cred-nombre{font-weight:700;font-size:1.02rem;letter-spacing:-.01em}
 .cred-sub{font-size:.8rem;color:var(--gris)}
-.check{
-  margin-left:auto;width:24px;height:24px;border-radius:50%;background:var(--verde-senal);
-  display:grid;place-items:center;flex:0 0 auto;
+.cred-verificado{
+  margin-left:auto;background:#EAF4E2;color:var(--verde-profundo);white-space:nowrap;
+  padding:4px 10px;border-radius:100px;font-size:.72rem;font-weight:600;flex:0 0 auto;
 }
-.check svg{width:13px;height:13px}
-.cred-fila{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--fondo);font-size:.85rem}
-.cred-fila:last-child{border-bottom:none}
-.cred-k{font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--gris)}
-.cred-v{font-weight:600}
-.pill{background:#EAF4E2;color:var(--verde-profundo);padding:3px 9px;border-radius:100px;font-size:.72rem;font-weight:600;font-family:'JetBrains Mono',monospace}
 .estrellas{color:var(--verde-senal);letter-spacing:2px}
+.cred-puntaje{display:flex;align-items:center;gap:6px;margin-top:16px;font-size:.9rem}
+.cred-puntaje-num{font-weight:700}
+.cred-resenas{color:var(--gris);font-size:.82rem}
+.cred-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+.chip{background:#fff;border:1.5px solid var(--verde-senal);color:var(--verde-profundo);padding:4px 12px;border-radius:100px;font-size:.76rem;font-weight:600}
+.cred-tarifa{margin-top:14px;font-size:.85rem;color:var(--carbon)}
+.cred-tarifa .cred-exp{color:var(--gris);font-weight:400}
+.cred-insignias{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px;padding-top:16px;border-top:1px solid var(--fondo)}
+.insignia{display:inline-flex;align-items:center;gap:4px;background:#EAF4E2;color:var(--verde-profundo);padding:3px 10px;border-radius:100px;font-size:.72rem;font-weight:600}
+.cred-btn{margin-top:18px;background:var(--verde-profundo);color:#fff;text-align:center;padding:11px;border-radius:9px;font-weight:600;font-size:.85rem}
 
 .lectura{
   border-left:2px solid var(--verde-senal);padding:4px 0 4px 18px;
@@ -170,6 +174,11 @@ section{padding:88px 0}
 .ad-head{font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;padding:14px 24px;font-weight:500}
 .ad-head.a{background:#EDEFE9;color:var(--gris);border-right:1px solid var(--borde)}
 .ad-head.d{background:#EAF4E2;color:var(--verde-profundo)}
+
+/* ---------- diferenciales ---------- */
+.grid-dif{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:14px 44px;margin-top:44px}
+@media(max-width:700px){.grid-dif{grid-template-columns:1fr}}
+.grid-dif li{display:flex;gap:12px;align-items:flex-start;font-size:.95rem}
 
 /* ---------- paneles de segmento ---------- */
 .panel{border-radius:20px;padding:52px 44px;margin-bottom:20px}
@@ -208,6 +217,7 @@ footer a{color:rgba(255,255,255,.8)}
     <div class="nav-links">
       <a href="#problema">El problema</a>
       <a href="#como">Cómo funciona</a>
+      <a href="#diferenciales">Diferenciales</a>
       <a href="#propietarios">Propietarios</a>
       <a href="#jardineros">Jardineros</a>
       <a class="btn-sm" href="mailto:hola@greengate.com.ar?subject=Demo%20GreenGate%20-%20Administraci%C3%B3n">Pedir demo</a>
@@ -219,13 +229,13 @@ footer a{color:rgba(255,255,255,.8)}
 <header class="hero">
   <div class="wrap">
     <span class="tag">Para administraciones de barrios privados</span>
-    <h1>Sabés quién entra. Sabés qué hizo. Sabés si lo hizo bien.</h1>
-    <p class="lead">GreenGate ordena el servicio de jardinería dentro de tu barrio: jardineros con documentación validada, trabajos con registro de ingreso y una reputación que los propietarios pueden ver antes de contratar. Sin cambiar cómo opera hoy la administración.</p>
+    <h1>Sabés quién entra. Sabés qué servicios presta. Sabés qué tan bien trabaja.</h1>
+    <p class="lead">GreenGate ordena los servicios de jardinería que se prestan dentro de tu barrio: servicios con documentación validada, registro de ingreso y una reputación que los propietarios pueden ver antes de contratar. Sin cambiar cómo opera hoy la administración, sino más bien agregándole una herramienta útil para el residente del barrio.</p>
     <div class="hero-cta">
-      <a class="btn btn-primario" href="mailto:hola@greengate.com.ar?subject=Demo%20GreenGate%20-%20Administraci%C3%B3n&body=Barrio%3A%0ACantidad%20de%20lotes%3A%0ANombre%20y%20cargo%3A%0ATel%C3%A9fono%3A">Solicitar una demo</a>
+      <a class="btn btn-primario" href="mailto:hola@greengate.com.ar?subject=Demo%20GreenGate%20-%20Administraci%C3%B3n&body=Barrio%3A%0ACantidad%20de%20lotes%3A%0ANombre%20y%20cargo%3A%0ATel%C3%A9fono%3A">Me interesa que me contacten</a>
       <a class="btn btn-ghost" href="#como">Ver cómo funciona</a>
     </div>
-    <p class="hero-nota">Hoy en jardinería. Mañana, en todos los servicios que entran al barrio.</p>
+    <p class="hero-nota">Hoy nos focalizamos en una primera etapa en servicios de jardinería. Próximamente, incorporaremos otros servicios que entran a un barrio.</p>
   </div>
 </header>
 
@@ -233,29 +243,29 @@ footer a{color:rgba(255,255,255,.8)}
 <section id="problema">
   <div class="wrap">
     <span class="eyebrow">El punto de partida</span>
-    <h2>El barrio sigue validando el ingreso.<br>Ahora además te conecta con quienes trabajan en el barrio.</h2>
-    <p class="lead" style="margin-top:16px">El servicio de jardinería en barrios privados funciona hoy a puro boca a boca. La administración no contrata ni se responsabiliza por el servicio — valida el ingreso, como siempre. GreenGate suma una herramienta: democratiza el acceso a los jardineros disponibles en el barrio, calificados por los propios vecinos que ya trabajaron con ellos.</p>
+    <h2>El barrio sigue validando el ingreso.<br>Y conecta a los residentes con quienes prestan servicio en el barrio.</h2>
+    <p class="lead" style="margin-top:16px">Los servicios en barrios privados funcionan hoy a puro boca a boca. La administración no contrata ni se responsabiliza por el servicio — valida el ingreso, como siempre. GreenGate suma una herramienta: democratiza el acceso a los jardineros disponibles en el barrio, calificados por los propios vecinos que ya trabajaron con ellos.</p>
 
     <div class="grid-problema">
       <div class="celda">
         <span class="num">01</span>
-        <h3>Personal sin cobertura</h3>
-        <p>Se contrata sin ART, sin seguro y sin verificación de identidad ni antecedentes. Cuando algo pasa dentro del barrio, la pregunta llega a la administración.</p>
+        <h3>Requisitos de ingreso no cumplimentados</h3>
+        <p>Se contrata un trabajo, pero cuando el prestador llega al barrio puede no tener ART o seguro, verificación de identidad, antecedentes u otros requisitos del barrio.</p>
       </div>
       <div class="celda">
         <span class="num">02</span>
-        <h3>La calidad es invisible</h3>
-        <p>No hay forma de distinguir al jardinero que trabaja bien del que no. La única señal disponible es el precio, y el precio no dice nada sobre el resultado.</p>
+        <h3>Calidad es invisible</h3>
+        <p>No hay forma de distinguir servicios buenos de malos, ni comparar precios y/o alcances.</p>
       </div>
       <div class="celda">
         <span class="num">03</span>
-        <h3>Sin trazabilidad del servicio</h3>
-        <p>Quedan registrados los ingresos, no los trabajos. Ante un reclamo no hay evidencia de qué se hizo, cuándo, ni en qué lote.</p>
+        <h3>Sin base de prestadores de servicios</h3>
+        <p>Hay registro de ingresos, no de trabajos, ni de cómo se hacen, ni si son recomendables.</p>
       </div>
       <div class="celda">
         <span class="num">04</span>
-        <h3>El reclamo cae en el lugar equivocado</h3>
-        <p>El propietario reclama a la administración por un servicio que la administración no contrató, no controla y no puede auditar.</p>
+        <h3>No hay dónde ni a quién reclamar</h3>
+        <p>El residente reclama a la administración si ocurre algo dentro del barrio, por algo que la administración no controla ni puede auditar.</p>
       </div>
     </div>
   </div>
@@ -282,23 +292,37 @@ footer a{color:rgba(255,255,255,.8)}
         </div>
       </div>
 
-      <div class="credencial" aria-label="Ejemplo de perfil verificado de un jardinero">
+      <div class="credencial" aria-label="Ejemplo de perfil de un jardinero, como lo ve un propietario en la app">
         <div class="cred-top">
           <div class="avatar">MR</div>
           <div>
             <div class="cred-nombre">Miguel R.</div>
-            <div class="cred-sub">Jardinería y mantenimiento</div>
+            <div class="cred-sub">Jardinería y mantenimiento · Los Robles</div>
           </div>
-          <div class="check" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#1C3A18" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          </div>
+          <span class="cred-verificado">✓ Verificado</span>
         </div>
-        <div class="cred-fila"><span class="cred-k">Identidad</span><span class="cred-v"><span class="pill">Verificada</span></span></div>
-        <div class="cred-fila"><span class="cred-k">Antecedentes</span><span class="cred-v"><span class="pill">Sin observaciones</span></span></div>
-        <div class="cred-fila"><span class="cred-k">ART / Seguro</span><span class="cred-v mono" style="font-size:.8rem">Vigente · 03/2027</span></div>
-        <div class="cred-fila"><span class="cred-k">Trabajos en el barrio</span><span class="cred-v">47</span></div>
-        <div class="cred-fila"><span class="cred-k">Calificación</span><span class="cred-v"><span class="estrellas">★★★★★</span> <span style="color:var(--gris);font-weight:500">4,8</span></span></div>
-        <div class="cred-fila"><span class="cred-k">Último trabajo</span><span class="cred-v mono" style="font-size:.8rem">Hace 3 días</span></div>
+
+        <div class="cred-puntaje">
+          <span class="estrellas">★★★★★</span>
+          <span class="cred-puntaje-num">4,8</span>
+          <span class="cred-resenas">(32 reseñas)</span>
+        </div>
+
+        <div class="cred-chips">
+          <span class="chip">Corte</span>
+          <span class="chip">Poda</span>
+          <span class="chip">Riego</span>
+        </div>
+
+        <div class="cred-tarifa">Desde <strong>ARS 8.000</strong> <span class="cred-exp">· 6 años de experiencia</span></div>
+
+        <div class="cred-insignias">
+          <span class="insignia">✓ Antecedentes</span>
+          <span class="insignia">✓ Seguro</span>
+          <span class="insignia">✓ Identidad</span>
+        </div>
+
+        <div class="cred-btn">Contactar</div>
       </div>
 
       <div class="col-der">
@@ -340,28 +364,25 @@ footer a{color:rgba(255,255,255,.8)}
       </div>
     </div>
 
-    <div class="ad">
-      <div class="ad-fila">
-        <div class="ad-head a">Hoy</div>
-        <div class="ad-head d">Con GreenGate</div>
-      </div>
-      <div class="ad-fila">
-        <div class="ad-cel ad-antes">Entra gente al barrio sin verificación de identidad ni cobertura.</div>
-        <div class="ad-cel ad-desp">Solo ingresan proveedores con documentación validada y vigente.</div>
-      </div>
-      <div class="ad-fila">
-        <div class="ad-cel ad-antes">Los reclamos por jardinería llegan a la administración sin evidencia.</div>
-        <div class="ad-cel ad-desp">Cada trabajo tiene registro de quién, cuándo, dónde y con qué calificación.</div>
-      </div>
-      <div class="ad-fila">
-        <div class="ad-cel ad-antes">La administración recomienda proveedores y asume el costo reputacional.</div>
-        <div class="ad-cel ad-desp">La administración habilita un estándar; la elección la hace cada propietario.</div>
-      </div>
-      <div class="ad-fila">
-        <div class="ad-cel ad-antes">Los buenos jardineros y los malos se ven exactamente igual.</div>
-        <div class="ad-cel ad-desp">La calidad se vuelve visible y el barrio se ordena solo.</div>
-      </div>
-    </div>
+  </div>
+</section>
+
+<!-- DIFERENCIALES -->
+<section id="diferenciales" class="sec-blanca" style="padding-top:0">
+  <div class="wrap">
+    <span class="eyebrow">Qué cambia con GreenGate</span>
+    <h2>Más que un directorio de teléfonos.</h2>
+    <p class="lead" style="margin-top:16px">No es una lista de contactos: es una forma distinta de pedir, comparar y resolver.</p>
+
+    <ul class="grid-dif">
+      <li><span class="tick verde"><svg viewBox="0 0 24 24" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><polyline points="20 6 9 17 4 12"></polyline></svg></span><span><strong>Comparás propuestas y precios, asistido por IA.</strong> Contás tu necesidad y la plataforma te ayuda a pedir presupuesto a varios prestadores a la vez, para elegir con criterio.</span></li>
+      <li><span class="tick verde"><svg viewBox="0 0 24 24" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><polyline points="20 6 9 17 4 12"></polyline></svg></span><span><strong>Servicio de urgencia.</strong> Si tu jardinero habitual te falla, o querés reforzar para algo puntual, accedé a quienes están disponibles de inmediato.</span></li>
+      <li><span class="tick verde"><svg viewBox="0 0 24 24" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><polyline points="20 6 9 17 4 12"></polyline></svg></span><span><strong>Proponés nuevos prestadores.</strong> ¿Conocés a alguien de confianza que todavía no está en la plataforma? Lo proponés para que se sume.</span></li>
+      <li><span class="tick verde"><svg viewBox="0 0 24 24" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><polyline points="20 6 9 17 4 12"></polyline></svg></span><span><strong>Solicitás los servicios que faltan.</strong> Si no encontrás lo que necesitás, lo pedís y ayudás a ampliar lo que ofrece la plataforma.</span></li>
+      <li><span class="tick verde"><svg viewBox="0 0 24 24" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><polyline points="20 6 9 17 4 12"></polyline></svg></span><span><strong>Respuesta inmediata.</strong> No esperás horas por una respuesta: la plataforma te conecta rápido con quien puede resolverlo.</span></li>
+    </ul>
+
+    <p class="hero-nota" style="margin-top:36px">Por el momento, la plataforma se enfoca en todos los servicios asociados a jardinería y sus derivados, incluido el cuidado de piletas.</p>
   </div>
 </section>
 
@@ -419,9 +440,9 @@ footer a{color:rgba(255,255,255,.8)}
 <section class="cierre">
   <div class="wrap">
     <span class="eyebrow claro" style="text-align:center">Para administraciones</span>
-    <h2>El barrio ya tiene control de acceso. Le falta control de servicio.</h2>
-    <p class="lead">Coordinamos una demo de 30 minutos y te mostramos cómo se vería GreenGate en tu barrio.</p>
-    <a class="btn btn-senal" href="mailto:hola@greengate.com.ar?subject=Demo%20GreenGate%20-%20Administraci%C3%B3n&body=Barrio%3A%0ACantidad%20de%20lotes%3A%0ANombre%20y%20cargo%3A%0ATel%C3%A9fono%3A">Solicitar una demo</a>
+    <h2>El barrio ya tiene control de acceso. Le proporciona una nueva herramienta a los residentes de su barrio.</h2>
+    <p class="lead">Coordinamos una demo y te mostramos cómo se vería GreenGate en tu barrio.</p>
+    <a class="btn btn-senal" href="mailto:hola@greengate.com.ar?subject=Demo%20GreenGate%20-%20Administraci%C3%B3n&body=Barrio%3A%0ACantidad%20de%20lotes%3A%0ANombre%20y%20cargo%3A%0ATel%C3%A9fono%3A">Me interesa que me contacten</a>
   </div>
 </section>
 
