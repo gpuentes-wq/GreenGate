@@ -123,7 +123,7 @@ El propietario se queda porque comparar ahí es mejor que afuera; el jardinero s
 
 - Definir los 2-3 barrios donde arrancar el piloto.
 - Redactar los mensajes de contacto (WhatsApp para propietarios y jardineros, mensaje más formal para administración).
-- Definir el detalle exacto de campos por cada tipo de servicio (jardinería general / poda / riego / diseño / pileta) para el esquema de la IA.
+- Catálogo de servicios y sub-alcances ya definido, ver [`catalogo-servicios.md`](catalogo-servicios.md). Falta armar el listado concreto de preguntas por servicio para el esquema de la IA.
 - Sumar la pregunta sobre servicio de urgencia a las entrevistas del piloto, para validar interés antes de construirlo.
 
 ---
