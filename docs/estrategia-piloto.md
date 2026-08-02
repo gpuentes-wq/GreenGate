@@ -57,6 +57,15 @@ El riesgo central de cualquier marketplace de dos lados: una vez que propietario
 Idea original: usar un LLM para levantar la información del pedido del propietario (descripción + fotos de lo que necesita) y transmitírsela estructurada al jardinero, para que arme un presupuesto más rápido — optimizando el ida y vuelta que hoy pasa por WhatsApp.
 
 - Se plantea como **gancho de entrada**, no como automatización de toda la negociación: la IA estructura el pedido y lo entrega armado al jardinero, que cotiza *dentro* de la app. No se plantea que la IA negocie sola desde el arranque — es mucho desarrollo para un MVP y no es necesario para dar valor real.
+
+**Diseño del flujo de descubrimiento** (cómo la IA entiende la necesidad):
+
+- **Esquema estructurado por tipo de servicio, no un cuestionario único.** No todos los trabajos necesitan las mismas preguntas — poda de árboles necesita altura, pileta necesita tamaño y tipo de mantenimiento, corte de pasto casi no necesita nada más que superficie. Con un esquema de campos por tipo de servicio (jardinería general / poda / riego / diseño / pileta), la cantidad real de preguntas baja mucho. Campos típicos: tipo de servicio, alcance, frecuencia (puntual o mensual/recurrente), tamaño (si aplica), altura (si aplica, poda), urgencia, especificaciones libres.
+- **La IA extrae primero, pregunta después.** Arranca por texto libre + foto opcional del propietario; de ahí saca todo lo que puede (un modelo con visión puede estimar tamaño/estado desde la foto) y solo pregunta lo que falta — casi nunca hacen falta las 10 preguntas completas.
+- **Tope de 10 preguntas forzado en código, no solo pedido en el prompt.** Un contador trackea cuántas se hicieron y corta el flujo al llegar a 10, aunque falte algún dato — ese campo queda como "a confirmar con el prestador" en el mensaje final, sin bloquear el pedido.
+- **El resultado es un mensaje estructurado, no un párrafo de chat.** Campos claros (tipo, alcance, tamaño, frecuencia, urgencia) + fotos + notas libres — así el jardinero puede cotizar rápido y el pedido es comparable entre varios prestadores.
+- **Para el MVP**, mejor arrancar más simple que un chat abierto multi-turno: un solo llamado a la IA que extrae lo que puede del texto/foto inicial y devuelve únicamente las 2-4 preguntas puntuales que faltan, en vez de un agente conversacional completo. Mucho más chico de construir y probar, y ya cumple el objetivo.
+
 - **Catálogo de especialidades como upsell de descubrimiento.** Si el perfil del jardinero muestra todas sus especialidades (corte, poda, riego, diseño), el propietario puede pedir varios servicios juntos desde el primer contacto, en vez de descubrirlos recién en una conversación separada más adelante. Esto funciona mejor *antes* del primer contacto directo — una vez que propietario y jardinero ya se conocen y tienen el teléfono del otro, un pedido adicional puede negociarse igual de fácil por WhatsApp, así que el valor real está en la etapa de descubrimiento, no en retener a un cliente que ya se tiene.
 
 ### Extensión: pedido en paralelo a varios jardineros + comparación asistida
@@ -68,6 +77,15 @@ Si el propietario ve 3 jardineros habilitados en su barrio, la IA arma el mismo 
 - **Cuidar cómo lo vive el jardinero.** Competir a ciegas contra otros puede generar rechazo; el marco correcto es "te llegan más pedidos por estar en la plataforma, y competís en igualdad de condiciones con tu reputación real" — coherente con la promesa de visibilidad y más clientes.
 - Técnicamente es más simple que automatizar toda la negociación: la IA solo estructura la entrada (un pedido) y resume la salida (N respuestas) — no necesita negociar nada.
 
+**Flujo completo, con la elección de destinatario:**
+
+1. Propietario describe la necesidad (texto + foto opcional) → la IA arma el pedido estructurado.
+2. **Elegir destinatarios.** Se muestra el listado de jardineros habilitados en su barrio (reutilizando la pantalla que ya existe, `PropietarioDirectorio` — puntaje, insignias, especialidades), pero para **seleccionar a quién mandarle el pedido**, no para contactar directo. Puede elegir uno solo o varios (ej. hasta 3, para la comparación).
+3. **"No encuentro a quien busco" → proponer un prestador nuevo.** En esa misma pantalla, si ninguno de los habilitados le sirve, puede sugerir un prestador (nombre, teléfono, cómo lo conoce). No lo suma automáticamente al directorio del barrio: queda como lead para que GreenGate/la administración lo contacte y lo pase por el proceso de verificación (documentación, ART, antecedentes) antes de habilitarlo, igual que cualquier otro prestador.
+4. Los jardineros seleccionados reciben el pedido y cotizan dentro de la app. Si eligió varios, se arma el comparativo.
+
+El paso 2 y 3 reutilizan una pantalla que ya está construida (el directorio de propietario), solo cambiándole el propósito de "Contactar" a "Elegir para pedir presupuesto" + agregando el botón de "Proponer prestador" — es una extensión, no algo nuevo desde cero.
+
 ### Diferencial: servicio de urgencia
 
 Propuesta: en la pantalla de propietarios, poder pedir un servicio de urgencia (ej. "no vino mi jardinero habitual") y acceder rápido a prestadores dispuestos a responder de inmediato. Es un momento donde el valor de estar en la plataforma se nota más que nunca: en una urgencia nadie quiere comparar presupuestos con calma, quiere ver ya quién está disponible ahora — algo que preguntar entre contactos por WhatsApp no resuelve tan rápido.
@@ -78,6 +96,25 @@ Propuesta: en la pantalla de propietarios, poder pedir un servicio de urgencia (
 - **Punto de atención**: en una urgencia hay menos tiempo para comparar reseñas con calma, así que probablemente convenga limitarlo a prestadores ya verificados y con una vara de calificación más alta, para compensar la menor chance de elegir con calma.
 - Es una funcionalidad de mayor alcance (necesita estado de disponibilidad en vivo) — buen tema para preguntar directamente en las entrevistas del piloto ("¿te serviría un servicio de urgencia?") antes de construirlo.
 
+### Chat conversacional por rol (puerta de entrada, no reemplazo de navegación)
+
+Punto de partida: ya existe una primera versión del MVP con las tablas definidas, los 3 roles que interactúan (propietario, jardinero, administración), la función de cada uno y una idea de qué datos ve cada perfil. La propuesta es que, al entrar según el rol, se abra un chat conversacional que ayude a interactuar y lleve al usuario a las secciones que correspondan.
+
+**Matiz importante: no reemplazar toda la navegación por el chat.**
+
+- Para tareas concretas y conocidas ("ver mis solicitudes", "editar mi perfil"), un botón o pestaña sigue siendo más rápido que escribirle a un chat — ahí el chat agrega fricción, no la saca.
+- Un router conversacional confiable para 3 roles distintos, cada uno con sus propias intenciones, es un desarrollo grande en sí mismo — no encaja con la filosofía de "validar antes de construir" del piloto.
+
+**Dónde sí tiene valor real: como puerta de entrada para lo que no tiene una pantalla clara.**
+
+El caso principal es el flujo de "pedir un servicio" (propietario) ya diseñado más arriba — ahí el chat tiene sentido porque la tarea es justamente contar algo con tus palabras (y fotos), no navegar un menú. Es literalmente el mismo agente de IA del flujo de descubrimiento — no hace falta un segundo sistema.
+
+**Cómo se plantea entonces:** al entrar según el rol, un cuadro tipo *"¿qué necesitás?"* que:
+- si detecta una necesidad de servicio (propietario) → lleva directo al flujo de IA de descubrimiento del pedido,
+- si detecta algo que ya resuelve una pantalla existente ("mis solicitudes", "mi perfil") → redirige ahí directamente, sin intentar resolverlo por chat.
+
+Así el chat suma valor donde el valor es real (describir una necesidad) y no compite con las pantallas que ya funcionan bien como botones. Aplica en principio a los 3 roles, aunque el caso de uso más claro hoy es el del propietario; para jardinero y administración habría que definir qué intenciones concretas justifican el chat (si alguna) antes de construirlo.
+
 ### Por qué cierra el modelo de negocio
 
 El propietario se queda porque comparar ahí es mejor que afuera; el jardinero se queda porque los pedidos comparativos (y el volumen de leads) solo le llegan estando en la plataforma. Combinado con reputación, recurrencia y pago in-app, da varias razones simultáneas para no desintermediar.
@@ -86,7 +123,7 @@ El propietario se queda porque comparar ahí es mejor que afuera; el jardinero s
 
 - Definir los 2-3 barrios donde arrancar el piloto.
 - Redactar los mensajes de contacto (WhatsApp para propietarios y jardineros, mensaje más formal para administración).
-- Diseñar el flujo concreto de la cotización asistida por IA (qué información se pide, cómo se estructura, cómo se le presenta al jardinero).
+- Definir el detalle exacto de campos por cada tipo de servicio (jardinería general / poda / riego / diseño / pileta) para el esquema de la IA.
 - Sumar la pregunta sobre servicio de urgencia a las entrevistas del piloto, para validar interés antes de construirlo.
 
 ---
