@@ -2,14 +2,12 @@ import { useState, type FormEvent } from 'react'
 import { supabase } from './lib/supabase'
 import { Modal, Campo, inputClass } from './ui'
 
-export function ContactarModal({
-  prestadorId,
-  prestadorNombre,
+export function PedirPresupuestoModal({
+  prestadores,
   onClose,
   onEnviado,
 }: {
-  prestadorId: string
-  prestadorNombre: string
+  prestadores: { id: string; nombre: string }[]
   onClose: () => void
   onEnviado: () => void
 }) {
@@ -27,12 +25,14 @@ export function ContactarModal({
     }
     setEnviando(true)
     setError(null)
-    const { error } = await supabase.from('solicitud').insert({
-      prestador_id: prestadorId,
-      contacto_nombre: nombre.trim(),
-      contacto_celular: celular.trim(),
-      mensaje: mensaje.trim() || null,
-    })
+    const { error } = await supabase.from('solicitud').insert(
+      prestadores.map((p) => ({
+        prestador_id: p.id,
+        contacto_nombre: nombre.trim(),
+        contacto_celular: celular.trim(),
+        mensaje: mensaje.trim() || null,
+      })),
+    )
     setEnviando(false)
     if (error) {
       setError(error.message)
@@ -42,10 +42,10 @@ export function ContactarModal({
   }
 
   return (
-    <Modal titulo={`Contactar a ${prestadorNombre}`} onClose={onClose}>
+    <Modal titulo={`Pedir presupuesto a ${prestadores.length} prestador${prestadores.length === 1 ? '' : 'es'}`} onClose={onClose}>
       <form onSubmit={enviar} className="space-y-3">
         <p className="text-sm text-gray-500">
-          Dejá tus datos y {prestadorNombre} se va a poner en contacto con vos.
+          Le va a llegar el mismo mensaje a: <strong>{prestadores.map((p) => p.nombre).join(', ')}</strong>.
         </p>
         <Campo label="Tu nombre *">
           <input className={inputClass} value={nombre} onChange={(e) => setNombre(e.target.value)} autoFocus />

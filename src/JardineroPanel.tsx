@@ -25,7 +25,7 @@ const TIPO_LABEL_PERSONA: Record<string, string> = {
 // Ordenado por urgencia, no como una lista plana de tarjetas iguales:
 // 1) Necesita tu atención (solicitudes + vencimientos) — lo único que
 //    cambia sesión a sesión y exige una acción.
-// 2) Tu negocio (puntaje, clientes activos, facturado) — salud general.
+// 2) Tu negocio (puntaje, clientes activos, presupuestos, servicios) — salud general.
 // 3) Tu perfil público (equipo, barrios, servicios y precios) — cambia
 //    poco, es más referencia que algo para chequear cada vez.
 export function JardineroPanel({
@@ -43,11 +43,13 @@ export function JardineroPanel({
   const [servicios, setServicios] = useState<ServicioPublicado[]>([])
   const [pendientes, setPendientes] = useState(0)
   const [clientesActivos, setClientesActivos] = useState(0)
-  const [facturadoMes, setFacturadoMes] = useState(0)
+  const [presupuestosRealizados, setPresupuestosRealizados] = useState(0)
   const [puntajePromedio, setPuntajePromedio] = useState<number | null>(null)
   const [cantidadValoraciones, setCantidadValoraciones] = useState(0)
   const [integrantesActivos, setIntegrantesActivos] = useState(0)
   const [alertas, setAlertas] = useState<Alerta[]>([])
+  const [disponibleUrgencia, setDisponibleUrgencia] = useState(false)
+  const [ofreceJardineriaGeneral, setOfreceJardineriaGeneral] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -59,10 +61,10 @@ export function JardineroPanel({
       const [pbRes, psRes, prRes, dirRes, solRes, trabRes, integRes, verifRes] = await Promise.all([
         supabase.from('prestador_barrio').select('barrio_id,habilitado').eq('prestador_id', prestadorId),
         supabase.from('prestador_servicio').select('tipo,tarifa').eq('prestador_id', prestadorId),
-        supabase.from('prestador').select('tipo_servicio_principal,tarifa_referencia').eq('id', prestadorId).single(),
+        supabase.from('prestador').select('tipo_servicio_principal,tarifa_referencia,disponible_urgencia').eq('id', prestadorId).single(),
         supabase.from('prestador_directorio').select('puntaje_promedio,cantidad_valoraciones').eq('id', prestadorId).single(),
         supabase.from('solicitud').select('estado').eq('prestador_id', prestadorId),
-        supabase.from('trabajo').select('monto,fecha,estado,propietario_id').eq('prestador_id', prestadorId),
+        supabase.from('trabajo').select('fecha,propietario_id').eq('prestador_id', prestadorId),
         supabase.from('integrante').select('id,nombre,apellido').eq('prestador_id', prestadorId).eq('activo', true),
         supabase.from('verificacion').select('tipo,estado,fecha_vencimiento,integrante_id').eq('prestador_id', prestadorId),
       ])
@@ -92,31 +94,30 @@ export function JardineroPanel({
       setCantidadValoraciones(dir?.cantidad_valoraciones ?? 0)
 
       // Servicios publicados: el principal (con su tarifa) + las especialidades.
-      const principal = prRes.data as { tipo_servicio_principal: string; tarifa_referencia: number | null } | null
+      const principal = prRes.data as { tipo_servicio_principal: string; tarifa_referencia: number | null; disponible_urgencia: boolean } | null
       const especialidades = (psRes.data as Array<{ tipo: string; tarifa: number | null }>) ?? []
       const lista: ServicioPublicado[] = []
       if (principal) lista.push({ tipo: principal.tipo_servicio_principal, tarifa: principal.tarifa_referencia, principal: true })
       for (const e of especialidades) lista.push({ tipo: e.tipo, tarifa: e.tarifa, principal: false })
       setServicios(lista)
+      setDisponibleUrgencia(principal?.disponible_urgencia ?? false)
+      setOfreceJardineriaGeneral(lista.some((s) => s.tipo === 'jardineria'))
 
       // Solicitudes pendientes (necesitan respuesta).
       const solicitudes = (solRes.data as Array<{ estado: string }>) ?? []
       setPendientes(solicitudes.filter((s) => s.estado === 'pendiente').length)
+      // Presupuestos realizados: solicitudes ya respondidas (no quedaron pendientes).
+      // Proxy más cercano disponible hoy — no hay todavía monto de cotización.
+      setPresupuestosRealizados(solicitudes.filter((s) => s.estado !== 'pendiente').length)
 
       // Clientes activos: propietarios distintos con un trabajo en los últimos 60 días.
-      const trabajos = (trabRes.data as Array<{ monto: number | null; fecha: string; estado: string; propietario_id: string | null }>) ?? []
+      const trabajos = (trabRes.data as Array<{ fecha: string; propietario_id: string | null }>) ?? []
       const hoy = new Date()
       const haceSesentaDias = new Date(hoy.getTime() - 60 * 86_400_000)
       const clientes = new Set(
         trabajos.filter((t) => t.propietario_id && new Date(t.fecha + 'T00:00:00') >= haceSesentaDias).map((t) => t.propietario_id as string),
       )
       setClientesActivos(clientes.size)
-
-      // Facturado este mes: trabajos realizados con fecha dentro del mes actual.
-      const facturado = trabajos
-        .filter((t) => t.estado === 'realizado' && esMismoMes(t.fecha, hoy))
-        .reduce((acc, t) => acc + (t.monto ?? 0), 0)
-      setFacturadoMes(facturado)
 
       // Alertas de documentación (propias, y de cada integrante si es un equipo).
       const nombrePorIntegrante = new Map(integrantes.map((i) => [i.id, `${i.nombre}${i.apellido ? ' ' + i.apellido : ''}`]))
@@ -136,6 +137,12 @@ export function JardineroPanel({
     }
     cargar()
   }, [prestadorId])
+
+  async function toggleUrgencia() {
+    const nuevoValor = !disponibleUrgencia
+    setDisponibleUrgencia(nuevoValor)
+    await supabase.from('prestador').update({ disponible_urgencia: nuevoValor }).eq('id', prestadorId)
+  }
 
   if (loading) return <p className="text-gray-500">Cargando…</p>
   if (error) return <p className="text-sm text-red-600">No se pudo cargar tu panel: {error}</p>
@@ -173,12 +180,36 @@ export function JardineroPanel({
         {todoAlDia && <p className="mt-1 text-sm text-gray-500">Todo al día.</p>}
       </section>
 
+      {ofreceJardineriaGeneral && (
+        <section className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
+          <div>
+            <div className="text-sm font-medium text-gray-800">Abierto a servicios de urgencia</div>
+            <div className="text-xs text-gray-500">Solo para jardinería general. Podés prenderlo y apagarlo según tu disponibilidad del día.</div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={disponibleUrgencia}
+            onClick={toggleUrgencia}
+            className={'relative h-6 w-11 shrink-0 rounded-full transition ' + (disponibleUrgencia ? 'bg-gg-green' : 'bg-gray-300')}
+          >
+            <span
+              className={
+                'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ' +
+                (disponibleUrgencia ? 'left-5' : 'left-0.5')
+              }
+            />
+          </button>
+        </section>
+      )}
+
       <section>
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Tu negocio</h3>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Tarjeta titulo="Tu puntaje" valor={puntajePromedio != null ? `★ ${puntajePromedio} (${cantidadValoraciones})` : 'Sin reseñas aún'} />
           <Tarjeta titulo="Clientes activos" valor={clientesActivos} />
-          <Tarjeta titulo="Facturado este mes" valor={`$${facturadoMes.toLocaleString('es-AR')}`} />
+          <Tarjeta titulo="Presupuestos realizados" valor={presupuestosRealizados} />
+          <Tarjeta titulo="Servicios activos" valor={servicios.length} />
         </div>
       </section>
 
@@ -261,15 +292,16 @@ export function JardineroPanel({
             titulo="Mapa de tus clientes"
             texto="Vas a poder ver la ubicación de tus clientes activos dentro del barrio, para organizar mejor tus visitas."
           />
+          <Placeholder icono="⚖️" titulo="Asesor legal" texto="Consultas legales relacionadas a tu actividad, sin costo adicional." />
+          <Placeholder icono="🛡️" titulo="Seguros" texto="Cotizá y contratá tu seguro/ART directo desde la plataforma." />
+          <Placeholder icono="🧾" titulo="Monotributo" texto="Ayuda para inscribirte y gestionar tu monotributo." />
+          <Placeholder icono="🎓" titulo="Capacitaciones" texto="Cursos y contenido para mejorar tu oficio y tu negocio." />
+          <Placeholder icono="💰" titulo="Créditos" texto="Acceso a créditos pensados para prestadores de servicios." />
+          <Placeholder icono="🧰" titulo="Compra de herramientas" texto="Descuentos y financiación para equipar tu trabajo." />
         </div>
       </section>
     </div>
   )
-}
-
-function esMismoMes(fechaISO: string, ref: Date): boolean {
-  const f = new Date(fechaISO + 'T00:00:00')
-  return f.getFullYear() === ref.getFullYear() && f.getMonth() === ref.getMonth()
 }
 
 function Placeholder({ icono, titulo, texto }: { icono: string; titulo: string; texto: string }) {

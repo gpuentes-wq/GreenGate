@@ -29,3 +29,16 @@ export interface Especialidad {
   tipo: string
   tarifa: number | null
 }
+
+export interface Valoracion {
+  id: string
+  prestador_id: string
+  puntaje: number
+  puntaje_calidad: number | null
+  puntaje_puntualidad: number | null
+  puntaje_comunicacion: number | null
+  puntaje_precio: number | null
+  comentario: string | null
+  respuesta_prestador: string | null
+  created_at: string
+}

@@ -5,6 +5,7 @@ import { servicioLabel } from './labels'
 import { SolicitudesPanel } from './SolicitudesPanel'
 import { JardineroPanel } from './JardineroPanel'
 import { IntegrantesManager } from './IntegrantesManager'
+import { BarriosManager } from './BarriosManager'
 
 const SERVICIOS = ['jardineria', 'poda', 'fumigacion', 'riego', 'diseno_paisajismo', 'limpieza_exterior', 'otro']
 
@@ -61,6 +62,7 @@ export default function JardineroOnboarding() {
   const [cuit, setCuit] = useState('')
   const [condicion, setCondicion] = useState('')
   const [barrioId, setBarrioId] = useState('')
+  const [disponibleUrgencia, setDisponibleUrgencia] = useState(false)
 
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -100,6 +102,7 @@ export default function JardineroOnboarding() {
     setCuit('')
     setCondicion('')
     setBarrioId('')
+    setDisponibleUrgencia(false)
     setError(null)
     setExito(false)
     setOkEditar(false)
@@ -140,12 +143,16 @@ export default function JardineroOnboarding() {
     setCuit((pr.cuit_cuil as string) ?? '')
     setCondicion((pr.condicion_fiscal as string) ?? '')
     setBarrioId('')
+    setDisponibleUrgencia(Boolean(pr.disponible_urgencia))
     setExito(false)
   }
 
   function toggleEsp(t: string) {
     setEspecialidades((es) => (es.includes(t) ? es.filter((x) => x !== t) : [...es, t]))
   }
+
+  // "Abierto a servicios de urgencia" solo aplica a jardinería general.
+  const ofreceJardineriaGeneral = servicioPrincipal === 'jardineria' || especialidades.includes('jardineria')
 
   async function enviar(e: FormEvent) {
     e.preventDefault()
@@ -177,6 +184,7 @@ export default function JardineroOnboarding() {
       descripcion: descripcion.trim() || null,
       anios_experiencia: experiencia ? Number(experiencia) : null,
       tarifa_referencia: tarifa ? Number(tarifa) : null,
+      disponible_urgencia: ofreceJardineriaGeneral ? disponibleUrgencia : false,
     }
     const espSel = especialidades.filter((t) => t !== servicioPrincipal)
 
@@ -383,6 +391,22 @@ export default function JardineroOnboarding() {
                   ))}
                 </div>
               </div>
+              {ofreceJardineriaGeneral && (
+                <label className="flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={disponibleUrgencia}
+                    onChange={(e) => setDisponibleUrgencia(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300"
+                  />
+                  <span>
+                    <span className="font-medium">Abierto a servicios de urgencia</span>
+                    <span className="block text-xs text-gray-500">
+                      Solo para jardinería general. Podés cambiarlo cuando quieras desde tu panel.
+                    </span>
+                  </span>
+                </label>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <Campo label="Zona preferente">
                   <input className={inputClass} value={zona} onChange={(e) => setZona(e.target.value)} />
@@ -433,7 +457,7 @@ export default function JardineroOnboarding() {
               </div>
             </fieldset>
 
-            {!editId && (
+            {!editId ? (
               <fieldset className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
                 <legend className="px-1 text-sm font-semibold text-gg-dark">¿Dónde querés trabajar?</legend>
                 <Campo label="Barrio (opcional)">
@@ -451,6 +475,11 @@ export default function JardineroOnboarding() {
                     Le vamos a pedir a la administración que valide tus documentos (antecedentes, seguro e identidad) para ese barrio.
                   </p>
                 )}
+              </fieldset>
+            ) : (
+              <fieldset className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
+                <legend className="px-1 text-sm font-semibold text-gg-dark">Barrios donde trabajás</legend>
+                <BarriosManager prestadorId={editId} />
               </fieldset>
             )}
 
@@ -479,7 +508,7 @@ function PanelPreview() {
       <span className="inline-block rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
         Vista previa · así se va a ver tu panel
       </span>
-      <div className="mt-3 grid grid-cols-3 gap-3">
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-lg bg-gray-50 p-3">
           <div className="text-xs text-gray-400">Tu puntaje</div>
           <div className="text-lg font-semibold text-gray-400">★ 4.8</div>
@@ -489,12 +518,16 @@ function PanelPreview() {
           <div className="text-lg font-semibold text-gray-400">6</div>
         </div>
         <div className="rounded-lg bg-gray-50 p-3">
-          <div className="text-xs text-gray-400">Facturado este mes</div>
-          <div className="text-lg font-semibold text-gray-400">$190.000</div>
+          <div className="text-xs text-gray-400">Presupuestos realizados</div>
+          <div className="text-lg font-semibold text-gray-400">9</div>
+        </div>
+        <div className="rounded-lg bg-gray-50 p-3">
+          <div className="text-xs text-gray-400">Servicios activos</div>
+          <div className="text-lg font-semibold text-gray-400">3</div>
         </div>
       </div>
       <p className="mt-3 text-xs text-gray-500">
-        Vas a ver tus solicitudes, tu reputación y lo que facturás por la app, de un vistazo. Completá tus datos abajo para empezar.
+        Vas a ver tus solicitudes, tu reputación y tu negocio de un vistazo. Completá tus datos abajo para empezar.
       </p>
     </div>
   )

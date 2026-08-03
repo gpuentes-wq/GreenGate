@@ -47,8 +47,8 @@ Detalle de solicitudes de presupuesto/trabajo con su estado correspondiente. Se 
 
 ## Pendiente / a definir
 
-- Definir exactamente qué cuenta como "presupuesto realizado" para la métrica de "Tu negocio".
-- Confirmar si la selección múltiple de barrios en "Mi perfil" entra en este MVP o queda para una iteración posterior.
+- **Resuelto**: "presupuesto realizado" = cantidad de `solicitud` de ese prestador con `estado` distinto de `pendiente` (ya la respondió, aceptada o rechazada) — proxy más cercano disponible hasta que exista el modelo `pedido`/monto de `spec-propietario.md`. Se revisa esta definición cuando esa extensión se construya.
+- **Resuelto**: la selección múltiple de barrios en "Mi perfil" sí entra en este MVP (sumar barrios nuevos vía `BarriosManager.tsx`) — dar de baja o editar un barrio ya sumado queda fuera de alcance, lo maneja administración.
 - Cómo se dispara y persiste la interacción de IA del lado del jardinero en "Mis solicitudes" (mismo tipo de diseño que la pantalla "Especificación de trabajo" del propietario, pero en sentido inverso).
 
 ---
