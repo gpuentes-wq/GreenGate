@@ -17,9 +17,9 @@ No hace falta cuenta ni instalar nada. Dos URLs públicas:
 
 En la app hay 3 pestañas arriba (Propietario / Jardinero / Administración). Sugerencia de recorrido:
 
-1. **Propietario** → mirá el directorio de jardineros, tildá "Solo verificados", tocá una foto del portfolio (se abre en grande), tocá "Contactar" en alguno y dejá tus datos.
-2. **Jardinero** → en "¿Ya tenés perfil?" elegí uno existente → pestaña "Solicitudes" → ahí vas a ver el contacto que acabás de dejar como propietario.
-3. **Administración** → mirá el panel de barrios y prestadores, la sección de alertas de vencimiento de documentación, y el botón "Validar" sobre un prestador.
+1. **Propietario** → elegí tu barrio (arriba de todo), después mirá el directorio de jardineros: buscá por nombre, tildá "Solo verificados", seleccioná uno o dos con el checkbox "Seleccionar para pedir presupuesto" y pedí presupuesto desde la barra que aparece abajo. Tocá el nombre de alguno para ver su perfil completo (todas las reseñas, precios y años de experiencia).
+2. **Jardinero** → en "¿Ya tenés perfil?" elegí uno existente → en el panel vas a ver "Tu negocio" (puntaje, clientes activos, presupuestos realizados, servicios activos) y el tilde de "Abierto a servicios de urgencia" → pestaña "Solicitudes" → ahí vas a ver el pedido de presupuesto que acabás de dejar como propietario.
+3. **Administración** → arranca directo en el panel de tu barrio (si la instancia tiene más de uno, te pide elegirlo primero): Resumen (prestadores, pendientes de validación, disponibles para urgencia), alertas de documentación por vencer, y el botón "Validar" sobre un prestador pendiente. Podés agregar un prestador nuevo vos mismo, o ir a "Ver todos mis barrios" para el panel multi-barrio.
 
 > ⚠️ **Nota importante**: es un entorno de piloto sin login todavía (más abajo se explica por qué). Los datos son **ficticios**, y técnicamente cualquiera que entre puede escribir o borrar información — no es una vulnerabilidad no vista, es una decisión consciente para esta etapa. No cargues datos reales.
 
@@ -28,9 +28,10 @@ Si al entrar la app tira "Failed to fetch": el proyecto de base de datos (plan g
 ## 2. Si tu mirada es técnica
 
 - **Arquitectura completa**: [`docs/arquitectura.md`](arquitectura.md) — stack, por qué no hay backend propio, flujos, costos, límites del plan gratuito.
-- **Modelo de datos**: [`docs/modelo-de-datos.md`](modelo-de-datos.md) (explicado simple) y [`supabase/schema.sql`](../supabase/schema.sql) (el esquema real, 14 tablas + 1 vista).
-- **Código de la app**: [`src/`](../src/) — React + Vite + TypeScript + Tailwind. Cada vista es un componente (`PropietarioDirectorio.tsx`, `JardineroOnboarding.tsx`, `AdminPanel.tsx`).
+- **Modelo de datos**: [`docs/modelo-de-datos.md`](modelo-de-datos.md) (explicado simple) y [`supabase/schema.sql`](../supabase/schema.sql) (el esquema base, 15 tablas + 1 vista — algunas migraciones posteriores en [`supabase/`](../supabase/) todavía no están volcadas ahí, como `prestador_sugerido`).
+- **Código de la app**: [`src/`](../src/) — React + Vite + TypeScript + Tailwind. Cada vista es un componente (`PropietarioDirectorio.tsx`, `JardineroOnboarding.tsx`, `AdminBarrioPanel.tsx` como panel principal de administración y `AdminPanel.tsx` como panel multi-barrio secundario).
 - **Seguridad — lo más importante a revisar**: RLS (Row Level Security) está **desactivado a propósito** (`supabase/rls-dev.sql`) porque todavía no hay login. Las políticas por rol ya están escritas como borrador en [`supabase/policies.sql`](../supabase/policies.sql), pendientes de activar. Los datos sensibles (antecedentes penales) nunca se guardan como documento, solo el estado de verificación — decisión explícita por la Ley 25.326.
+- **IA de descubrimiento (prototipo)**: hay un primer armado funcional en [`scripts/ia/`](../scripts/ia/) que estructura, con la API de Claude, un pedido en lenguaje natural del propietario. Corre como script local — todavía no está conectado a la app porque falta decidir dónde vive la clave de API en producción (Supabase Edge Function vs. Netlify Function). Es la pieza pendiente más relevante del lado conversacional del producto.
 
 **Preguntas que ayudarían más que un veredicto general:**
 - ¿El plan para pasar de RLS-off a RLS-on con login es sólido, o falta algo?
