@@ -36,6 +36,12 @@ Este documento se enfoca en el **panel de un barrio**, que es el que falta const
 - Cómo administración revisa y gestiona los leads que llegan de la funcionalidad "proponer nuevo prestador" del propietario (`spec-propietario.md`, pantalla 2) — no quedó definida una pantalla específica para esto todavía.
 - Detalle de qué ve la administración en el panel multi-barrio (pantalla secundaria) más allá de lo que ya existe hoy.
 
+## Resuelto (implementado)
+
+- **Sustituto de login**: como todavía no hay login, el panel de un barrio usa un selector de barrio igual que Propietario y Jardinero. Si la administración tiene un solo barrio (el caso más común), se auto-selecciona y no se muestra ningún selector — entra directo a operar, como pedía el spec.
+- **`prestador.origen`**: se implementó como columna de texto simple con default `'autoregistro'`, sin `CHECK` constraint (consistente con el resto de las migraciones del proyecto, que no retrofittean enums). Valores usados hoy: `autoregistro`, `alta_administracion`.
+- El panel multi-barrio (`AdminPanel.tsx`) quedó accesible solo cuando la administración tiene más de un barrio, vía el link "Ver todos mis barrios".
+
 ---
 
 *Universidad de San Andrés · Maestría en Negocios Digitales (NBL) · Proyecto GreenGate*

@@ -22,6 +22,8 @@ export interface PrestadorDirectorio {
   activo: boolean
   puntaje_promedio: number | null
   cantidad_valoraciones: number
+  disponible_urgencia: boolean
+  origen: string
 }
 
 export interface Especialidad {

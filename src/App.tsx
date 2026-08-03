@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import AdminPanel from './AdminPanel'
+import Administracion from './Administracion'
 import PropietarioDirectorio from './PropietarioDirectorio'
 import JardineroOnboarding from './JardineroOnboarding'
 
@@ -37,7 +37,7 @@ export default function App() {
 
       {vista === 'propietario' && <PropietarioDirectorio />}
       {vista === 'jardinero' && <JardineroOnboarding />}
-      {vista === 'admin' && <AdminPanel />}
+      {vista === 'admin' && <Administracion />}
     </div>
   )
 }
