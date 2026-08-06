@@ -12,7 +12,6 @@ type PrestadorCompleto = {
   razon_social: string | null
   es_empresa: boolean
   tipo_servicio_principal: string
-  zona_preferente: string | null
   descripcion: string | null
   anios_experiencia: number | null
   tarifa_referencia: number | null
@@ -34,7 +33,7 @@ export function PerfilJardinero({ prestadorId, onVolver }: { prestadorId: string
       const [p, e, v, ver, integ] = await Promise.all([
         supabase
           .from('prestador')
-          .select('id,nombre,apellido,razon_social,es_empresa,tipo_servicio_principal,zona_preferente,descripcion,anios_experiencia,tarifa_referencia')
+          .select('id,nombre,apellido,razon_social,es_empresa,tipo_servicio_principal,descripcion,anios_experiencia,tarifa_referencia')
           .eq('id', prestadorId)
           .single(),
         supabase.from('prestador_servicio').select('prestador_id,tipo,tarifa').eq('prestador_id', prestadorId),
@@ -80,10 +79,7 @@ export function PerfilJardinero({ prestadorId, onVolver }: { prestadorId: string
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">{nombre}</h1>
-            <p className="text-sm text-gray-500">
-              {servicioLabel(prestador.tipo_servicio_principal)}
-              {prestador.zona_preferente ? ` · ${prestador.zona_preferente}` : ''}
-            </p>
+            <p className="text-sm text-gray-500">{servicioLabel(prestador.tipo_servicio_principal)}</p>
           </div>
           {badges.antecedentes && badges.seguro && badges.identidad && (
             <span className="shrink-0 rounded-full bg-gg-light px-2 py-1 text-xs font-medium text-gg-dark">✓ Verificado</span>

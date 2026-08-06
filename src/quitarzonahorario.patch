@@ -1,0 +1,103 @@
+diff --git a/src/JardineroOnboarding.tsx b/src/JardineroOnboarding.tsx
+index 32244f3..6727fd2 100644
+--- a/src/JardineroOnboarding.tsx
++++ b/src/JardineroOnboarding.tsx
+@@ -55,7 +55,6 @@ export default function JardineroOnboarding() {
+   const [servicioPrincipal, setServicioPrincipal] = useState('jardineria')
+   const [especialidades, setEspecialidades] = useState<string[]>([])
+   const [zona, setZona] = useState('GBA Norte')
+-  const [horario, setHorario] = useState('')
+   const [experiencia, setExperiencia] = useState('')
+   const [tarifa, setTarifa] = useState('')
+   const [descripcion, setDescripcion] = useState('')
+@@ -95,7 +94,6 @@ export default function JardineroOnboarding() {
+     setServicioPrincipal('jardineria')
+     setEspecialidades([])
+     setZona('GBA Norte')
+-    setHorario('')
+     setExperiencia('')
+     setTarifa('')
+     setDescripcion('')
+@@ -136,7 +134,6 @@ export default function JardineroOnboarding() {
+     setServicioPrincipal((pr.tipo_servicio_principal as string) ?? 'jardineria')
+     setEspecialidades(((esp as { tipo: string }[]) ?? []).map((e) => e.tipo))
+     setZona((pr.zona_preferente as string) ?? '')
+-    setHorario((pr.horario_trabajo as string) ?? '')
+     setExperiencia(pr.anios_experiencia != null ? String(pr.anios_experiencia) : '')
+     setTarifa(pr.tarifa_referencia != null ? String(pr.tarifa_referencia) : '')
+     setDescripcion((pr.descripcion as string) ?? '')
+@@ -180,7 +177,6 @@ export default function JardineroOnboarding() {
+       condicion_fiscal: condicion || null,
+       tipo_servicio_principal: servicioPrincipal,
+       zona_preferente: zona.trim() || null,
+-      horario_trabajo: horario.trim() || null,
+       descripcion: descripcion.trim() || null,
+       anios_experiencia: experiencia ? Number(experiencia) : null,
+       tarifa_referencia: tarifa ? Number(tarifa) : null,
+@@ -407,14 +403,9 @@ export default function JardineroOnboarding() {
+                   </span>
+                 </label>
+               )}
+-              <div className="grid grid-cols-2 gap-3">
+-                <Campo label="Zona preferente">
+-                  <input className={inputClass} value={zona} onChange={(e) => setZona(e.target.value)} />
+-                </Campo>
+-                <Campo label="Horario">
+-                  <input className={inputClass} value={horario} onChange={(e) => setHorario(e.target.value)} placeholder="Lun-Vie 8-17" />
+-                </Campo>
+-              </div>
++              <Campo label="Zona preferente">
++                <input className={inputClass} value={zona} onChange={(e) => setZona(e.target.value)} />
++              </Campo>
+               <div className="grid grid-cols-2 gap-3">
+                 <Campo label="Años de experiencia">
+                   <input type="number" min="0" className={inputClass} value={experiencia} onChange={(e) => setExperiencia(e.target.value)} />
+diff --git a/src/PerfilJardinero.tsx b/src/PerfilJardinero.tsx
+index 77e68ff..1e739a4 100644
+--- a/src/PerfilJardinero.tsx
++++ b/src/PerfilJardinero.tsx
+@@ -12,7 +12,6 @@ type PrestadorCompleto = {
+   razon_social: string | null
+   es_empresa: boolean
+   tipo_servicio_principal: string
+-  zona_preferente: string | null
+   descripcion: string | null
+   anios_experiencia: number | null
+   tarifa_referencia: number | null
+@@ -34,7 +33,7 @@ export function PerfilJardinero({ prestadorId, onVolver }: { prestadorId: string
+       const [p, e, v, ver, integ] = await Promise.all([
+         supabase
+           .from('prestador')
+-          .select('id,nombre,apellido,razon_social,es_empresa,tipo_servicio_principal,zona_preferente,descripcion,anios_experiencia,tarifa_referencia')
++          .select('id,nombre,apellido,razon_social,es_empresa,tipo_servicio_principal,descripcion,anios_experiencia,tarifa_referencia')
+           .eq('id', prestadorId)
+           .single(),
+         supabase.from('prestador_servicio').select('prestador_id,tipo,tarifa').eq('prestador_id', prestadorId),
+@@ -80,10 +79,7 @@ export function PerfilJardinero({ prestadorId, onVolver }: { prestadorId: string
+         <div className="flex items-start justify-between gap-3">
+           <div>
+             <h1 className="text-xl font-semibold text-gray-900">{nombre}</h1>
+-            <p className="text-sm text-gray-500">
+-              {servicioLabel(prestador.tipo_servicio_principal)}
+-              {prestador.zona_preferente ? ` · ${prestador.zona_preferente}` : ''}
+-            </p>
++            <p className="text-sm text-gray-500">{servicioLabel(prestador.tipo_servicio_principal)}</p>
+           </div>
+           {badges.antecedentes && badges.seguro && badges.identidad && (
+             <span className="shrink-0 rounded-full bg-gg-light px-2 py-1 text-xs font-medium text-gg-dark">✓ Verificado</span>
+diff --git a/src/PropietarioDirectorio.tsx b/src/PropietarioDirectorio.tsx
+index 972871f..3c2ade5 100644
+--- a/src/PropietarioDirectorio.tsx
++++ b/src/PropietarioDirectorio.tsx
+@@ -202,10 +202,7 @@ export default function PropietarioDirectorio() {
+                     >
+                       {nombre}
+                     </button>
+-                    <div className="text-sm text-gray-500">
+-                      {servicioLabel(p.tipo_servicio_principal)}
+-                      {p.zona_preferente ? ` · ${p.zona_preferente}` : ''}
+-                    </div>
++                    <div className="text-sm text-gray-500">{servicioLabel(p.tipo_servicio_principal)}</div>
+                   </div>
+                   {verificado && (
+                     <span className="shrink-0 rounded-full bg-gg-light px-2 py-1 text-xs font-medium text-gg-dark">

@@ -202,10 +202,7 @@ export default function PropietarioDirectorio() {
                     >
                       {nombre}
                     </button>
-                    <div className="text-sm text-gray-500">
-                      {servicioLabel(p.tipo_servicio_principal)}
-                      {p.zona_preferente ? ` · ${p.zona_preferente}` : ''}
-                    </div>
+                    <div className="text-sm text-gray-500">{servicioLabel(p.tipo_servicio_principal)}</div>
                   </div>
                   {verificado && (
                     <span className="shrink-0 rounded-full bg-gg-light px-2 py-1 text-xs font-medium text-gg-dark">
