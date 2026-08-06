@@ -54,7 +54,6 @@ export default function JardineroOnboarding() {
   const [domicilio, setDomicilio] = useState('')
   const [servicioPrincipal, setServicioPrincipal] = useState('jardineria')
   const [especialidades, setEspecialidades] = useState<string[]>([])
-  const [zona, setZona] = useState('GBA Norte')
   const [experiencia, setExperiencia] = useState('')
   const [tarifa, setTarifa] = useState('')
   const [descripcion, setDescripcion] = useState('')
@@ -93,7 +92,6 @@ export default function JardineroOnboarding() {
     setDomicilio('')
     setServicioPrincipal('jardineria')
     setEspecialidades([])
-    setZona('GBA Norte')
     setExperiencia('')
     setTarifa('')
     setDescripcion('')
@@ -133,7 +131,6 @@ export default function JardineroOnboarding() {
     setDomicilio((pr.domicilio as string) ?? '')
     setServicioPrincipal((pr.tipo_servicio_principal as string) ?? 'jardineria')
     setEspecialidades(((esp as { tipo: string }[]) ?? []).map((e) => e.tipo))
-    setZona((pr.zona_preferente as string) ?? '')
     setExperiencia(pr.anios_experiencia != null ? String(pr.anios_experiencia) : '')
     setTarifa(pr.tarifa_referencia != null ? String(pr.tarifa_referencia) : '')
     setDescripcion((pr.descripcion as string) ?? '')
@@ -176,7 +173,6 @@ export default function JardineroOnboarding() {
       cuit_cuil: cuit.trim() || null,
       condicion_fiscal: condicion || null,
       tipo_servicio_principal: servicioPrincipal,
-      zona_preferente: zona.trim() || null,
       descripcion: descripcion.trim() || null,
       anios_experiencia: experiencia ? Number(experiencia) : null,
       tarifa_referencia: tarifa ? Number(tarifa) : null,
@@ -403,9 +399,6 @@ export default function JardineroOnboarding() {
                   </span>
                 </label>
               )}
-              <Campo label="Zona preferente">
-                <input className={inputClass} value={zona} onChange={(e) => setZona(e.target.value)} />
-              </Campo>
               <div className="grid grid-cols-2 gap-3">
                 <Campo label="Años de experiencia">
                   <input type="number" min="0" className={inputClass} value={experiencia} onChange={(e) => setExperiencia(e.target.value)} />
