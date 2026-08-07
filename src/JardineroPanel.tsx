@@ -251,7 +251,7 @@ export function JardineroPanel({
           </div>
 
           <div>
-            <div className="mb-2 text-sm font-medium text-gray-700">Tus servicios y precios</div>
+            <div className="mb-2 text-sm font-medium text-gray-700">Tus servicios</div>
             {servicios.length === 0 ? (
               <EmptyState>Todavía no tenés servicios publicados.</EmptyState>
             ) : (

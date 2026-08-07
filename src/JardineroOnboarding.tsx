@@ -353,7 +353,7 @@ export default function JardineroOnboarding() {
             </fieldset>
 
             <fieldset className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
-              <legend className="px-1 text-sm font-semibold text-gg-dark">Tu servicio</legend>
+              <legend className="px-1 text-sm font-semibold text-gg-dark">Tus servicios</legend>
               <Campo label="Servicio principal">
                 <select className={inputClass} value={servicioPrincipal} onChange={(e) => setServicioPrincipal(e.target.value)}>
                   {SERVICIOS.map((s) => (
@@ -363,6 +363,15 @@ export default function JardineroOnboarding() {
                   ))}
                 </select>
               </Campo>
+              {/* Van pegados al servicio principal: la tarifa es su precio de referencia. */}
+              <div className="grid grid-cols-2 gap-3">
+                <Campo label="Años de experiencia">
+                  <input type="number" min="0" className={inputClass} value={experiencia} onChange={(e) => setExperiencia(e.target.value)} />
+                </Campo>
+                <Campo label="Tarifa de referencia (ARS)">
+                  <input type="number" min="0" className={inputClass} value={tarifa} onChange={(e) => setTarifa(e.target.value)} />
+                </Campo>
+              </div>
               <div>
                 <span className="mb-1 block text-sm font-medium text-gray-700">Especialidades adicionales</span>
                 <div className="flex flex-wrap gap-2">
@@ -399,14 +408,6 @@ export default function JardineroOnboarding() {
                   </span>
                 </label>
               )}
-              <div className="grid grid-cols-2 gap-3">
-                <Campo label="Años de experiencia">
-                  <input type="number" min="0" className={inputClass} value={experiencia} onChange={(e) => setExperiencia(e.target.value)} />
-                </Campo>
-                <Campo label="Tarifa de referencia (ARS)">
-                  <input type="number" min="0" className={inputClass} value={tarifa} onChange={(e) => setTarifa(e.target.value)} />
-                </Campo>
-              </div>
               <Campo label="Presentación / bio">
                 <textarea
                   className={inputClass}
