@@ -12,11 +12,13 @@ type Extra = { tarifa: number | null; experiencia: number | null }
 type BarrioOpt = { id: string; nombre: string }
 type PrestadorBarrioRow = { prestador_id: string; barrio_id: string; habilitado: boolean }
 
-export default function PropietarioDirectorio() {
+// barrioInicial llega de la pantalla de selección de rol; el selector de barrio
+// se mantiene igual, para poder cambiar sin volver al inicio.
+export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioInicial?: string }) {
   const [vista, setVista] = useState<{ tipo: 'listado' } | { tipo: 'perfil'; prestadorId: string }>({ tipo: 'listado' })
 
   const [barrios, setBarrios] = useState<BarrioOpt[]>([])
-  const [barrioId, setBarrioId] = useState('')
+  const [barrioId, setBarrioId] = useState(barrioInicial)
   const [prestadorBarrio, setPrestadorBarrio] = useState<PrestadorBarrioRow[]>([])
 
   const [prestadores, setPrestadores] = useState<PrestadorDirectorio[]>([])

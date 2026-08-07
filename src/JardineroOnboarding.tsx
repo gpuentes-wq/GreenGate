@@ -32,16 +32,10 @@ const SUBTITULOS: Record<Seccion, string> = {
 }
 
 type BarrioOpt = { id: string; nombre: string }
-type PrestadorLite = { id: string; nombre: string; apellido: string | null; razon_social: string | null; es_empresa: boolean }
-
-function nombreJardinero(j: PrestadorLite): string {
-  if (j.es_empresa && j.razon_social) return j.razon_social
-  return j.apellido ? `${j.nombre} ${j.apellido}` : j.nombre
-}
-
-export default function JardineroOnboarding() {
+// prestadorInicial llega de la pantalla de selección de rol: si trae un id, se
+// entra directo al panel de ese jardinero; si es null, al alta de perfil nuevo.
+export default function JardineroOnboarding({ prestadorInicial = null }: { prestadorInicial?: string | null }) {
   const [barrios, setBarrios] = useState<BarrioOpt[]>([])
-  const [jardineros, setJardineros] = useState<PrestadorLite[]>([])
   const [editId, setEditId] = useState<string | null>(null)
   const [seccion, setSeccion] = useState<Seccion>('panel')
 
@@ -65,20 +59,14 @@ export default function JardineroOnboarding() {
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [exito, setExito] = useState(false)
+  // Id del perfil recién creado, para poder entrar a su panel desde el "¡Tu perfil se creó!".
+  const [creadoId, setCreadoId] = useState<string | null>(null)
   const [okEditar, setOkEditar] = useState(false)
 
   useEffect(() => {
     supabase.from('barrio').select('id,nombre').order('nombre').then(({ data }) => setBarrios((data as BarrioOpt[]) ?? []))
-    cargarJardineros()
-  }, [])
-
-  async function cargarJardineros() {
-    const { data } = await supabase
-      .from('prestador')
-      .select('id,nombre,apellido,razon_social,es_empresa')
-      .order('nombre')
-    setJardineros((data as PrestadorLite[]) ?? [])
-  }
+    if (prestadorInicial) seleccionar(prestadorInicial)
+  }, [prestadorInicial])
 
   function reiniciar() {
     setEditId(null)
@@ -101,6 +89,7 @@ export default function JardineroOnboarding() {
     setDisponibleUrgencia(false)
     setError(null)
     setExito(false)
+    setCreadoId(null)
     setOkEditar(false)
   }
 
@@ -193,7 +182,6 @@ export default function JardineroOnboarding() {
       }
       setGuardando(false)
       setOkEditar(true)
-      cargarJardineros()
       return
     }
 
@@ -221,8 +209,8 @@ export default function JardineroOnboarding() {
       ])
     }
     setGuardando(false)
+    setCreadoId(prestadorId)
     setExito(true)
-    cargarJardineros()
   }
 
   if (exito) {
@@ -237,10 +225,10 @@ export default function JardineroOnboarding() {
               : 'Ya estás en el directorio. Más adelante sumá un barrio y tus documentos para que te validen y destaquen.'}
           </p>
           <button
-            onClick={reiniciar}
+            onClick={() => creadoId && seleccionar(creadoId)}
             className="mt-5 rounded-lg bg-gg-green px-4 py-2 text-sm font-medium text-white hover:bg-gg-dark"
           >
-            Cargar otro jardinero
+            Ir a mi panel
           </button>
         </div>
       </main>
@@ -258,23 +246,6 @@ export default function JardineroOnboarding() {
     <main className={'mx-auto px-6 py-8 ' + ancho}>
       <h1 className="text-xl font-semibold text-gg-dark">{titulo}</h1>
       <p className="mb-6 text-sm text-gray-500">{subtitulo}</p>
-
-      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white p-3">
-        <span className="text-sm text-gray-600">¿Ya tenés perfil?</span>
-        <select value={editId ?? ''} onChange={(e) => seleccionar(e.target.value)} className={inputClass + ' max-w-xs'}>
-          <option value="">— Crear perfil nuevo —</option>
-          {jardineros.map((j) => (
-            <option key={j.id} value={j.id}>
-              {nombreJardinero(j)}
-            </option>
-          ))}
-        </select>
-        {editId && (
-          <button type="button" onClick={reiniciar} className="text-sm font-medium text-gg-green hover:underline">
-            + Crear nuevo
-          </button>
-        )}
-      </div>
 
       {editId && (
         <div className="mb-6 flex gap-1 border-b border-gray-200">
