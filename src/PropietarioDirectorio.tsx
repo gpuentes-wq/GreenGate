@@ -241,7 +241,7 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
                   <div className="mt-3 text-sm text-gray-700">
                     {ex.tarifa != null && (
                       <span>
-                        Desde <strong>ARS {ex.tarifa.toLocaleString('es-AR')}</strong>
+                        Desde <strong>ARS {ex.tarifa.toLocaleString('es-AR')}</strong> por mes
                       </span>
                     )}
                     {ex.experiencia != null && (

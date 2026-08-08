@@ -102,34 +102,35 @@ export function PerfilJardinero({ prestadorId, onVolver }: { prestadorId: string
 
         <div className="mt-4 flex flex-wrap gap-3 text-sm text-gray-600">
           {prestador.anios_experiencia != null && <span>{prestador.anios_experiencia} años de experiencia</span>}
-          {prestador.tarifa_referencia != null && <span>Desde ARS {prestador.tarifa_referencia.toLocaleString('es-AR')}</span>}
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Insignia ok={badges.antecedentes} label="Antecedentes" />
-          <Insignia ok={badges.seguro} label="Seguro" />
-          <Insignia ok={badges.identidad} label="Identidad" />
+          {prestador.tarifa_referencia != null && (
+            <span>Desde ARS {prestador.tarifa_referencia.toLocaleString('es-AR')} por mes</span>
+          )}
         </div>
 
         {especialidades.length > 0 && (
           <div className="mt-5">
-            <div className="mb-2 text-sm font-medium text-gray-700">Servicios y precios de referencia</div>
-            <div className="overflow-hidden rounded-lg border border-gray-100">
-              <table className="w-full text-sm">
-                <tbody>
-                  {especialidades.map((e, i) => (
-                    <tr key={i} className="border-t border-gray-100 first:border-t-0">
-                      <td className="px-3 py-2 text-gray-800">{servicioLabel(e.tipo)}</td>
-                      <td className="px-3 py-2 text-right text-gray-600">
-                        {e.tarifa != null ? `desde ARS ${e.tarifa.toLocaleString('es-AR')}` : 'sin precio cargado'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="mb-2 text-sm font-medium text-gray-700">También ofrece</div>
+            <div className="flex flex-wrap gap-2">
+              {especialidades.map((e, i) => (
+                <span key={i} className="rounded-full bg-gg-light px-3 py-1 text-sm text-gg-dark">
+                  {servicioLabel(e.tipo)}
+                </span>
+              ))}
+            </div>
+            <div className="mt-2 text-xs text-gray-500">
+              Estos servicios se cotizan según lo que necesites: pedile un presupuesto.
             </div>
           </div>
         )}
+
+        <div className="mt-5">
+          <div className="mb-2 text-sm font-medium text-gray-700">Documentación verificada</div>
+          <div className="flex flex-wrap gap-2">
+            <Insignia ok={badges.antecedentes} label="Antecedentes" />
+            <Insignia ok={badges.seguro} label="Seguro" />
+            <Insignia ok={badges.identidad} label="Identidad" />
+          </div>
+        </div>
       </div>
 
       <section className="mt-6">

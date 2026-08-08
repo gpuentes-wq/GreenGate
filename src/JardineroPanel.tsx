@@ -6,7 +6,9 @@ import { VerificacionesResumen } from './VerificacionesResumen'
 import { alertaVencimiento } from './verificacion'
 
 type BarrioOperativo = { nombre: string; habilitado: boolean }
-type ServicioPublicado = { tipo: string; tarifa: number | null; principal: boolean }
+// La tarifa vive solo en el servicio principal, y es mensual. Las especialidades
+// adicionales se publican sin precio: se cotizan en cada pedido.
+type ServicioPrincipal = { tipo: string; tarifa: number | null }
 type Alerta = { texto: string; vencido: boolean }
 type IntegranteNombre = { id: string; nombre: string; apellido: string | null }
 
@@ -40,7 +42,8 @@ export function JardineroPanel({
   onVerEquipo: () => void
 }) {
   const [barrios, setBarrios] = useState<BarrioOperativo[]>([])
-  const [servicios, setServicios] = useState<ServicioPublicado[]>([])
+  const [servicioPrincipal, setServicioPrincipal] = useState<ServicioPrincipal | null>(null)
+  const [especialidades, setEspecialidades] = useState<string[]>([])
   const [pendientes, setPendientes] = useState(0)
   const [clientesActivos, setClientesActivos] = useState(0)
   const [presupuestosRealizados, setPresupuestosRealizados] = useState(0)
@@ -60,7 +63,7 @@ export function JardineroPanel({
 
       const [pbRes, psRes, prRes, dirRes, solRes, trabRes, integRes, verifRes] = await Promise.all([
         supabase.from('prestador_barrio').select('barrio_id,habilitado').eq('prestador_id', prestadorId),
-        supabase.from('prestador_servicio').select('tipo,tarifa').eq('prestador_id', prestadorId),
+        supabase.from('prestador_servicio').select('tipo').eq('prestador_id', prestadorId),
         supabase.from('prestador').select('tipo_servicio_principal,tarifa_referencia,disponible_urgencia').eq('id', prestadorId).single(),
         supabase.from('prestador_directorio').select('puntaje_promedio,cantidad_valoraciones').eq('id', prestadorId).single(),
         supabase.from('solicitud').select('estado').eq('prestador_id', prestadorId),
@@ -93,15 +96,15 @@ export function JardineroPanel({
       setPuntajePromedio(dir?.puntaje_promedio ?? null)
       setCantidadValoraciones(dir?.cantidad_valoraciones ?? 0)
 
-      // Servicios publicados: el principal (con su tarifa) + las especialidades.
+      // El principal lleva la tarifa mensual; las especialidades, solo el nombre.
       const principal = prRes.data as { tipo_servicio_principal: string; tarifa_referencia: number | null; disponible_urgencia: boolean } | null
-      const especialidades = (psRes.data as Array<{ tipo: string; tarifa: number | null }>) ?? []
-      const lista: ServicioPublicado[] = []
-      if (principal) lista.push({ tipo: principal.tipo_servicio_principal, tarifa: principal.tarifa_referencia, principal: true })
-      for (const e of especialidades) lista.push({ tipo: e.tipo, tarifa: e.tarifa, principal: false })
-      setServicios(lista)
+      const adicionales = ((psRes.data as Array<{ tipo: string }>) ?? [])
+        .map((e) => e.tipo)
+        .filter((t) => t !== principal?.tipo_servicio_principal)
+      setServicioPrincipal(principal ? { tipo: principal.tipo_servicio_principal, tarifa: principal.tarifa_referencia } : null)
+      setEspecialidades(adicionales)
       setDisponibleUrgencia(principal?.disponible_urgencia ?? false)
-      setOfreceJardineriaGeneral(lista.some((s) => s.tipo === 'jardineria'))
+      setOfreceJardineriaGeneral(principal?.tipo_servicio_principal === 'jardineria' || adicionales.includes('jardineria'))
 
       // Solicitudes pendientes (necesitan respuesta).
       const solicitudes = (solRes.data as Array<{ estado: string }>) ?? []
@@ -209,7 +212,7 @@ export function JardineroPanel({
           <Tarjeta titulo="Tu puntaje" valor={puntajePromedio != null ? `★ ${puntajePromedio} (${cantidadValoraciones})` : 'Sin reseñas aún'} />
           <Tarjeta titulo="Clientes activos" valor={clientesActivos} />
           <Tarjeta titulo="Presupuestos realizados" valor={presupuestosRealizados} />
-          <Tarjeta titulo="Servicios activos" valor={servicios.length} />
+          <Tarjeta titulo="Servicios activos" valor={(servicioPrincipal ? 1 : 0) + especialidades.length} />
         </div>
       </section>
 
@@ -252,26 +255,38 @@ export function JardineroPanel({
 
           <div>
             <div className="mb-2 text-sm font-medium text-gray-700">Tus servicios</div>
-            {servicios.length === 0 ? (
+            {!servicioPrincipal ? (
               <EmptyState>Todavía no tenés servicios publicados.</EmptyState>
             ) : (
-              <div className="overflow-hidden rounded-lg border border-gray-100">
-                <table className="w-full text-sm">
-                  <tbody>
-                    {servicios.map((s, i) => (
-                      <tr key={i} className="border-t border-gray-100 first:border-t-0">
-                        <td className="px-3 py-2 text-gray-800">
-                          {servicioLabel(s.tipo)}
-                          {s.principal && <span className="ml-2 text-xs text-gray-400">(principal)</span>}
-                        </td>
-                        <td className="px-3 py-2 text-right text-gray-600">
-                          {s.tarifa != null ? `desde $${s.tarifa.toLocaleString('es-AR')}` : 'sin precio cargado'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="flex items-baseline justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2 text-sm">
+                  <span className="text-gray-800">
+                    {servicioLabel(servicioPrincipal.tipo)}
+                    <span className="ml-2 text-xs text-gray-400">(principal)</span>
+                  </span>
+                  <span className="text-right text-gray-600">
+                    {servicioPrincipal.tarifa != null ? (
+                      <>
+                        Desde ARS {servicioPrincipal.tarifa.toLocaleString('es-AR')} por mes
+                      </>
+                    ) : (
+                      'sin precio cargado'
+                    )}
+                  </span>
+                </div>
+                {especialidades.length > 0 && (
+                  <div className="mt-3">
+                    <div className="mb-1 text-xs text-gray-500">También ofrecés, a cotizar en cada pedido:</div>
+                    <div className="flex flex-wrap gap-2">
+                      {especialidades.map((t) => (
+                        <span key={t} className="rounded-full bg-gg-light px-3 py-1 text-sm text-gg-dark">
+                          {servicioLabel(t)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 

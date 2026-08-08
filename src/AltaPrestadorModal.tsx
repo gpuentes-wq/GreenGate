@@ -3,8 +3,10 @@ import { supabase } from './lib/supabase'
 import { Modal, Campo, inputClass } from './ui'
 import { servicioLabel } from './labels'
 
-const SERVICIOS = ['jardineria', 'poda', 'fumigacion', 'riego', 'diseno_paisajismo', 'limpieza_exterior', 'otro']
 const CONDICIONES = ['informal', 'monotributo', 'responsable_inscripto', 'exento', 'otro']
+
+// Fijo en esta etapa: GreenGate arranca solo con jardinería.
+const SERVICIO_PRINCIPAL = 'jardineria'
 
 // Alta de un prestador que la administración ya conoce (trabaja informalmente
 // en el barrio). Queda pendiente de validación como cualquier otro alta —
@@ -23,7 +25,6 @@ export function AltaPrestadorModal({
   const [apellido, setApellido] = useState('')
   const [razonSocial, setRazonSocial] = useState('')
   const [celular, setCelular] = useState('')
-  const [servicioPrincipal, setServicioPrincipal] = useState('jardineria')
   const [condicion, setCondicion] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,7 +50,7 @@ export function AltaPrestadorModal({
         razon_social: esEmpresa ? razonSocial.trim() : null,
         es_empresa: esEmpresa,
         celular: celular.trim(),
-        tipo_servicio_principal: servicioPrincipal,
+        tipo_servicio_principal: SERVICIO_PRINCIPAL,
         condicion_fiscal: condicion || null,
         origen: 'alta_administracion',
       })
@@ -113,14 +114,9 @@ export function AltaPrestadorModal({
         </Campo>
 
         <div className="grid grid-cols-2 gap-3">
+          {/* Fijo en esta etapa, igual que en el alta del jardinero. */}
           <Campo label="Servicio principal">
-            <select className={inputClass} value={servicioPrincipal} onChange={(e) => setServicioPrincipal(e.target.value)}>
-              {SERVICIOS.map((s) => (
-                <option key={s} value={s}>
-                  {servicioLabel(s)}
-                </option>
-              ))}
-            </select>
+            <div className={inputClass + ' bg-gray-50 text-gray-500'}>{servicioLabel(SERVICIO_PRINCIPAL)}</div>
           </Campo>
           <Campo label="Condición fiscal">
             <select className={inputClass} value={condicion} onChange={(e) => setCondicion(e.target.value)}>

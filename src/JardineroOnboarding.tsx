@@ -325,26 +325,29 @@ export default function JardineroOnboarding({ prestadorInicial = null }: { prest
 
             <fieldset className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
               <legend className="px-1 text-sm font-semibold text-gg-dark">Tus servicios</legend>
+              {/* Fijo en esta etapa: GreenGate arranca solo con jardinería. Se muestra el
+                  valor guardado (no una constante) para no pisar el rubro de un prestador
+                  que ya tuviera otro. Cuando se sumen rubros, vuelve a ser un desplegable. */}
               <Campo label="Servicio principal">
-                <select className={inputClass} value={servicioPrincipal} onChange={(e) => setServicioPrincipal(e.target.value)}>
-                  {SERVICIOS.map((s) => (
-                    <option key={s} value={s}>
-                      {servicioLabel(s)}
-                    </option>
-                  ))}
-                </select>
+                <div className={inputClass + ' bg-gray-50 text-gray-500'}>{servicioLabel(servicioPrincipal)}</div>
+                <span className="mt-1 block text-xs text-gray-500">
+                  Por ahora GreenGate arranca solo con jardinería. Los demás servicios los sumás abajo.
+                </span>
               </Campo>
               {/* Van pegados al servicio principal: la tarifa es su precio de referencia. */}
               <div className="grid grid-cols-2 gap-3">
                 <Campo label="Años de experiencia">
                   <input type="number" min="0" className={inputClass} value={experiencia} onChange={(e) => setExperiencia(e.target.value)} />
                 </Campo>
-                <Campo label="Tarifa de referencia (ARS)">
+                <Campo label="Tarifa de referencia mensual (ARS)">
                   <input type="number" min="0" className={inputClass} value={tarifa} onChange={(e) => setTarifa(e.target.value)} />
                 </Campo>
               </div>
               <div>
-                <span className="mb-1 block text-sm font-medium text-gray-700">Especialidades adicionales</span>
+                <span className="block text-sm font-medium text-gray-700">Servicios adicionales</span>
+                <span className="mb-2 block text-xs text-gray-500">
+                  No llevan precio fijo: los cotizás en cada pedido, según lo que necesite el cliente.
+                </span>
                 <div className="flex flex-wrap gap-2">
                   {SERVICIOS.filter((s) => s !== servicioPrincipal).map((s) => (
                     <button
