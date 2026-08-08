@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import { Modal } from './ui'
-import { ESTADOS_DECISION, estadoVerificacion, ESTADO_LABEL, ESTADO_COLOR } from './verificacion'
+import { ESTADOS_DECISION, estadoVerificacion, ESTADO_LABEL, ESTADO_COLOR, prestadorVerificado } from './verificacion'
 
 const TIPO_LABELS: Record<string, string> = {
   antecedentes_penales: 'Antecedentes penales',
@@ -45,14 +45,31 @@ export function ValidarPrestadorModal({
     cargar()
   }, [prestadorId])
 
+  // Habilitar en el barrio no es un dato aparte que el admin tenga que acordarse
+  // de tocar: se deriva de la documentación, con la misma regla que usan las
+  // insignias (para un equipo, TODOS los integrantes activos al día). Al validar
+  // el último papel el prestador entra al directorio, y si algo se rechaza o
+  // vence, sale. Se sincronizan todos sus barrios porque la verificación es del
+  // prestador, no de un barrio puntual.
+  async function sincronizarHabilitacion(nuevas: Verif[]) {
+    const habilitado = prestadorVerificado(nuevas, integrantes.map((i) => ({ id: i.id, activo: true })))
+    const { error } = await supabase.from('prestador_barrio').update({ habilitado }).eq('prestador_id', prestadorId)
+    if (error) setError(error.message)
+  }
+
   async function guardar(id: string, cambios: Partial<Verif>) {
-    setVerifs((vs) => vs.map((v) => (v.id === id ? { ...v, ...cambios } : v)))
+    const nuevas = verifs.map((v) => (v.id === id ? { ...v, ...cambios } : v))
+    setVerifs(nuevas)
     const { error } = await supabase
       .from('verificacion')
       .update({ ...cambios, validado_por: administracionId, validado_en: new Date().toISOString() })
       .eq('id', id)
-    if (error) setError(error.message)
-    else onCambio()
+    if (error) {
+      setError(error.message)
+      return
+    }
+    await sincronizarHabilitacion(nuevas)
+    onCambio()
   }
 
   const esEquipo = integrantes.length > 0
@@ -72,6 +89,10 @@ export function ValidarPrestadorModal({
           <p className="text-sm text-gray-500">
             Elegí tu <strong>decisión</strong> y la <strong>fecha de vencimiento</strong>. El estado
             (Vigente / Vencido) se calcula solo a partir de la fecha — no se elige a mano.
+          </p>
+          <p className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
+            Cuando la documentación queda completa, el prestador aparece automáticamente en el
+            directorio que ven los propietarios. Si algo se rechaza o vence, deja de aparecer.
           </p>
 
           {esEquipo && (
