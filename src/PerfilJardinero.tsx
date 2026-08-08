@@ -124,7 +124,7 @@ export function PerfilJardinero({ prestadorId, onVolver }: { prestadorId: string
         )}
 
         <div className="mt-5">
-          <div className="mb-2 text-sm font-medium text-gray-700">Documentación verificada</div>
+          <div className="mb-2 text-sm font-medium text-gray-700">Documentación</div>
           <div className="flex flex-wrap gap-2">
             <Insignia ok={badges.antecedentes} label="Antecedentes" />
             <Insignia ok={badges.seguro} label="Seguro" />

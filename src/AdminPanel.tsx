@@ -220,7 +220,7 @@ export default function AdminPanel({ onVolver }: { onVolver?: () => void }) {
                       <th className="px-4 py-2 font-medium">Prestador</th>
                       <th className="px-4 py-2 font-medium">Servicio</th>
                       <th className="px-4 py-2 font-medium">Puntaje</th>
-                      <th className="px-4 py-2 font-medium">Verificaciones</th>
+                      <th className="px-4 py-2 font-medium">Documentación</th>
                       <th className="px-4 py-2"></th>
                     </tr>
                   </thead>

@@ -48,7 +48,7 @@ export function VerificacionesResumen({ prestadorId }: { prestadorId: string }) 
 
   return (
     <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4">
-      <div className="mb-2 text-sm font-semibold text-gg-dark">Estado de tus verificaciones</div>
+      <div className="mb-2 text-sm font-semibold text-gg-dark">Tu documentación</div>
       <div className="space-y-1.5">
         {seguro && <FilaEstado label={TIPO_LABELS.seguro_art} verif={seguro} />}
         {!esEquipo && propias.map((v, i) => <FilaEstado key={i} label={TIPO_LABELS[v.tipo] ?? v.tipo} verif={v} />)}
@@ -66,7 +66,7 @@ export function VerificacionesResumen({ prestadorId }: { prestadorId: string }) 
                 </div>
                 <div className="space-y-1">
                   {suyas.length === 0 ? (
-                    <p className="text-xs text-gray-400">Sin verificaciones cargadas todavía.</p>
+                    <p className="text-xs text-gray-400">Sin documentación cargada todavía.</p>
                   ) : (
                     suyas.map((v, i) => <FilaEstado key={i} label={TIPO_LABELS[v.tipo] ?? v.tipo} verif={v} />)
                   )}

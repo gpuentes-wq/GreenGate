@@ -66,7 +66,7 @@ export function ValidarPrestadorModal({
       ) : error ? (
         <p className="text-sm text-red-600">{error}</p>
       ) : verifs.length === 0 ? (
-        <p className="text-sm text-gray-500">Este prestador no tiene verificaciones cargadas.</p>
+        <p className="text-sm text-gray-500">Este prestador todavía no tiene documentación cargada.</p>
       ) : (
         <div className="space-y-5">
           <p className="text-sm text-gray-500">
@@ -104,7 +104,7 @@ export function ValidarPrestadorModal({
                     {integ.apellido ? ` ${integ.apellido}` : ''}
                   </div>
                   {propias.length === 0 ? (
-                    <p className="text-xs text-gray-400">Sin verificaciones cargadas para esta persona.</p>
+                    <p className="text-xs text-gray-400">Sin documentación cargada para esta persona.</p>
                   ) : (
                     <div className="space-y-3">
                       {propias.map((v) => (
