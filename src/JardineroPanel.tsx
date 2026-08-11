@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import { servicioLabel } from './labels'
-import { Tarjeta, EmptyState } from './ui'
+import { Tarjeta, EmptyState, Switch } from './ui'
 import { VerificacionesResumen } from './VerificacionesResumen'
 import { alertaVencimiento } from './verificacion'
 
@@ -203,20 +203,7 @@ export function JardineroPanel({
             <div className="text-sm font-medium text-gray-800">Abierto a servicios de urgencia</div>
             <div className="text-xs text-gray-500">Solo para jardinería general. Podés prenderlo y apagarlo según tu disponibilidad del día.</div>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={disponibleUrgencia}
-            onClick={toggleUrgencia}
-            className={'relative h-6 w-11 shrink-0 rounded-full transition ' + (disponibleUrgencia ? 'bg-gg-green' : 'bg-gray-300')}
-          >
-            <span
-              className={
-                'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ' +
-                (disponibleUrgencia ? 'left-5' : 'left-0.5')
-              }
-            />
-          </button>
+          <Switch activo={disponibleUrgencia} onCambiar={toggleUrgencia} etiqueta="Abierto a servicios de urgencia" />
         </section>
       )}
 

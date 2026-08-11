@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from './lib/supabase'
 import type { PrestadorDirectorio } from './types'
-import { Insignia, EmptyState, Tarjeta } from './ui'
+import { Insignia, EmptyState, Tarjeta, Switch } from './ui'
 import { ValidarPrestadorModal } from './ValidarPrestadorModal'
 import { AltaPrestadorModal } from './AltaPrestadorModal'
 import { alertaVencimiento, badgesPrestador, prestadorVerificado, type VerificacionRow, type IntegranteRow } from './verificacion'
@@ -290,15 +290,11 @@ export function AdminBarrioPanel({ onVerMultibarrio }: { onVerMultibarrio?: () =
                             </div>
                           </td>
                           <td className="px-4 py-2">
-                            <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-gray-600">
-                              <input
-                                type="checkbox"
-                                checked={habilitadoEnBarrio.has(p.id)}
-                                onChange={(e) => cambiarHabilitacion(p.id, e.target.checked)}
-                                className="h-4 w-4 rounded border-gray-300"
-                              />
-                              {habilitadoEnBarrio.has(p.id) ? 'Sí' : 'No'}
-                            </label>
+                            <Switch
+                              activo={habilitadoEnBarrio.has(p.id)}
+                              onCambiar={(v) => cambiarHabilitacion(p.id, v)}
+                              etiqueta={`Habilitar a ${nombreMostrar(p)} en este barrio`}
+                            />
                           </td>
                           <td className="px-4 py-2 text-right">
                             <button

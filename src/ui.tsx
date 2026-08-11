@@ -34,6 +34,36 @@ export function Campo({ label, children }: { label: string; children: ReactNode 
   )
 }
 
+// Interruptor de encendido/apagado. Para cosas que se prenden y se apagan
+// seguido (disponibilidad, habilitación) un switch lee mejor que un checkbox:
+// se ve el estado de un vistazo, sin leer la etiqueta.
+export function Switch({
+  activo,
+  onCambiar,
+  etiqueta,
+}: {
+  activo: boolean
+  onCambiar: (valor: boolean) => void
+  etiqueta: string
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={activo}
+      aria-label={etiqueta}
+      onClick={() => onCambiar(!activo)}
+      className={'relative h-6 w-11 shrink-0 rounded-full transition ' + (activo ? 'bg-gg-green' : 'bg-gray-300')}
+    >
+      <span
+        className={
+          'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ' + (activo ? 'left-5' : 'left-0.5')
+        }
+      />
+    </button>
+  )
+}
+
 export function Tarjeta({
   titulo,
   valor,
