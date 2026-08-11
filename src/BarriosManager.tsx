@@ -79,7 +79,7 @@ export function BarriosManager({ prestadorId }: { prestadorId: string }) {
               key={a.barrio_id}
               className={'rounded-full px-3 py-1 text-sm ' + (a.habilitado ? 'bg-gg-light text-gg-dark' : 'bg-amber-50 text-amber-700')}
             >
-              {a.nombre} · {a.habilitado ? 'habilitado' : 'pendiente de validación'}
+              {a.nombre} · {a.habilitado ? 'habilitado' : 'pendiente de habilitación'}
             </span>
           ))}
         </div>

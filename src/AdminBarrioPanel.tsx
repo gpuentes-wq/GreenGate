@@ -13,7 +13,7 @@ const TIPO_LABELS: Record<string, string> = {
 }
 
 type BarrioOpt = { id: string; nombre: string }
-type PrestadorBarrioRow = { prestador_id: string; barrio_id: string }
+type PrestadorBarrioRow = { prestador_id: string; barrio_id: string; habilitado: boolean }
 type Verif = VerificacionRow & { id: string; prestador_id: string }
 type IntegranteConNombre = IntegranteRow & { prestador_id: string; nombre: string; apellido: string | null }
 type Alerta = { id: string; prestador_id: string; nombre: string; tipo: string; texto: string; vencido: boolean }
@@ -35,7 +35,7 @@ export function AdminBarrioPanel({ onVerMultibarrio }: { onVerMultibarrio?: () =
     setError(null)
     const [b, pb, p, a, v, i] = await Promise.all([
       supabase.from('barrio').select('id,nombre').order('nombre'),
-      supabase.from('prestador_barrio').select('prestador_id,barrio_id'),
+      supabase.from('prestador_barrio').select('prestador_id,barrio_id,habilitado'),
       supabase.from('prestador_directorio').select('*').order('puntaje_promedio', { ascending: false, nullsFirst: false }),
       supabase.from('administracion').select('id').limit(1),
       supabase.from('verificacion').select('id,tipo,estado,fecha_vencimiento,prestador_id,integrante_id'),
@@ -61,6 +61,22 @@ export function AdminBarrioPanel({ onVerMultibarrio }: { onVerMultibarrio?: () =
     setLoading(true)
     cargar().finally(() => setLoading(false))
   }, [cargar])
+
+  // Habilitar el ingreso al barrio es una decisión de la administración,
+  // separada de la documentación: un jardinero que ya trabaja hace años puede
+  // estar habilitado mientras termina de presentar el seguro. El propietario lo
+  // ve en el directorio, sin insignias — que es información útil, no un error.
+  async function cambiarHabilitacion(prestadorId: string, habilitado: boolean) {
+    setPrestadorBarrio((rows) =>
+      rows.map((r) => (r.prestador_id === prestadorId && r.barrio_id === barrioId ? { ...r, habilitado } : r)),
+    )
+    const { error } = await supabase
+      .from('prestador_barrio')
+      .update({ habilitado })
+      .eq('prestador_id', prestadorId)
+      .eq('barrio_id', barrioId)
+    if (error) setError(error.message)
+  }
 
   const verifsPorPrestador = useMemo(() => {
     const m: Record<string, Verif[]> = {}
@@ -88,6 +104,11 @@ export function AdminBarrioPanel({ onVerMultibarrio }: { onVerMultibarrio?: () =
   const lista = useMemo(
     () => prestadores.filter((p) => idsEnBarrio.has(p.id)),
     [prestadores, idsEnBarrio],
+  )
+
+  const habilitadoEnBarrio = useMemo(
+    () => new Set(prestadorBarrio.filter((r) => r.barrio_id === barrioId && r.habilitado).map((r) => r.prestador_id)),
+    [prestadorBarrio, barrioId],
   )
 
   const pendientes = lista.filter(
@@ -234,6 +255,7 @@ export function AdminBarrioPanel({ onVerMultibarrio }: { onVerMultibarrio?: () =
                       <th className="px-4 py-2 font-medium">Servicio</th>
                       <th className="px-4 py-2 font-medium">Puntaje</th>
                       <th className="px-4 py-2 font-medium">Documentación</th>
+                      <th className="px-4 py-2 font-medium">Habilitado</th>
                       <th className="px-4 py-2"></th>
                     </tr>
                   </thead>
@@ -266,6 +288,17 @@ export function AdminBarrioPanel({ onVerMultibarrio }: { onVerMultibarrio?: () =
                               <Insignia ok={b.seguro} label="Seguro" />
                               <Insignia ok={b.identidad} label="Identidad" />
                             </div>
+                          </td>
+                          <td className="px-4 py-2">
+                            <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-gray-600">
+                              <input
+                                type="checkbox"
+                                checked={habilitadoEnBarrio.has(p.id)}
+                                onChange={(e) => cambiarHabilitacion(p.id, e.target.checked)}
+                                className="h-4 w-4 rounded border-gray-300"
+                              />
+                              {habilitadoEnBarrio.has(p.id) ? 'Sí' : 'No'}
+                            </label>
                           </td>
                           <td className="px-4 py-2 text-right">
                             <button

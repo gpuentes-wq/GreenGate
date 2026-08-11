@@ -127,10 +127,24 @@ export function JardineroPanel({
       const verifRows = (verifRes.data as Array<{ tipo: string; estado: string; fecha_vencimiento: string | null; integrante_id: string | null }>) ?? []
       const listaAlertas: Alerta[] = []
       for (const v of verifRows) {
-        const al = alertaVencimiento(v.estado, v.fecha_vencimiento)
-        if (!al) continue
         const persona = v.integrante_id ? nombrePorIntegrante.get(v.integrante_id) : null
         const etiqueta = persona ? `${TIPO_LABEL_PERSONA[v.tipo] ?? v.tipo} ${persona}` : TIPO_LABEL_PROPIO[v.tipo] ?? v.tipo
+
+        // alertaVencimiento() solo cubre vencido / por vencer — está pensada para
+        // documentación ya validada. Del lado del jardinero también importa lo que
+        // todavía no se validó: sin esto el panel decía "Todo al día" con papeles
+        // sin presentar.
+        if (v.estado === 'pendiente') {
+          listaAlertas.push({ texto: `${etiqueta}: pendiente de validación`, vencido: false })
+          continue
+        }
+        if (v.estado === 'rechazado') {
+          listaAlertas.push({ texto: `${etiqueta}: rechazada, volvé a presentarla`, vencido: true })
+          continue
+        }
+
+        const al = alertaVencimiento(v.estado, v.fecha_vencimiento)
+        if (!al) continue
         listaAlertas.push({ texto: `${etiqueta} ${al.texto}`, vencido: al.vencido })
       }
       listaAlertas.sort((a, b) => Number(b.vencido) - Number(a.vencido))
@@ -246,7 +260,7 @@ export function JardineroPanel({
                       'rounded-full px-3 py-1 text-sm ' + (b.habilitado ? 'bg-gg-light text-gg-dark' : 'bg-amber-50 text-amber-700')
                     }
                   >
-                    {b.nombre} · {b.habilitado ? 'habilitado' : 'pendiente de validación'}
+                    {b.nombre} · {b.habilitado ? 'habilitado' : 'pendiente de habilitación'}
                   </span>
                 ))}
               </div>
