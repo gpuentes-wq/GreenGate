@@ -309,6 +309,7 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
       {modalPresupuesto && (
         <PedirPresupuestoModal
           prestadores={seleccionadosInfo}
+          barrioId={barrioId}
           onClose={() => setModalPresupuesto(false)}
           onEnviado={() => {
             setEnviados((e) => {

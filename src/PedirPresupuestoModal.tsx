@@ -4,10 +4,12 @@ import { Modal, Campo, inputClass } from './ui'
 
 export function PedirPresupuestoModal({
   prestadores,
+  barrioId,
   onClose,
   onEnviado,
 }: {
   prestadores: { id: string; nombre: string }[]
+  barrioId: string
   onClose: () => void
   onEnviado: () => void
 }) {
@@ -28,6 +30,7 @@ export function PedirPresupuestoModal({
     const { error } = await supabase.from('solicitud').insert(
       prestadores.map((p) => ({
         prestador_id: p.id,
+        barrio_id: barrioId,
         contacto_nombre: nombre.trim(),
         contacto_celular: celular.trim(),
         mensaje: mensaje.trim() || null,
