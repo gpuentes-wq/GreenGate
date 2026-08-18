@@ -202,12 +202,15 @@ export default function JardineroOnboarding({ prestadorInicial = null }: { prest
     }
     if (barrioId) {
       await supabase.from('prestador_barrio').insert({ prestador_id: prestadorId, barrio_id: barrioId, habilitado: false })
-      await supabase.from('verificacion').insert([
-        { prestador_id: prestadorId, barrio_id: barrioId, tipo: 'antecedentes_penales', estado: 'pendiente' },
-        { prestador_id: prestadorId, barrio_id: barrioId, tipo: 'seguro_art', estado: 'pendiente' },
-        { prestador_id: prestadorId, barrio_id: barrioId, tipo: 'identidad', estado: 'pendiente' },
-      ])
     }
+    // Fuera del if: la documentación es del prestador, no de un barrio. Antes
+    // vivía adentro y quien se registraba sin elegir barrio quedaba sin ninguna
+    // verificación, sin forma de salir de ese estado.
+    await supabase.from('verificacion').insert([
+      { prestador_id: prestadorId, tipo: 'antecedentes_penales', estado: 'pendiente' },
+      { prestador_id: prestadorId, tipo: 'seguro_art', estado: 'pendiente' },
+      { prestador_id: prestadorId, tipo: 'identidad', estado: 'pendiente' },
+    ])
     setGuardando(false)
     setCreadoId(prestadorId)
     setExito(true)

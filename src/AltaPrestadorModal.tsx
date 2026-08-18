@@ -71,10 +71,12 @@ export function AltaPrestadorModal({
       setError(pbErr.message)
       return
     }
+    // Sin barrio_id: la documentación es del prestador. Qué exige cada barrio
+    // se resuelve aparte, con barrio.requiere_* (todavía sin UI).
     await supabase.from('verificacion').insert([
-      { prestador_id: prestadorId, barrio_id: barrioId, tipo: 'antecedentes_penales', estado: 'pendiente' },
-      { prestador_id: prestadorId, barrio_id: barrioId, tipo: 'seguro_art', estado: 'pendiente' },
-      { prestador_id: prestadorId, barrio_id: barrioId, tipo: 'identidad', estado: 'pendiente' },
+      { prestador_id: prestadorId, tipo: 'antecedentes_penales', estado: 'pendiente' },
+      { prestador_id: prestadorId, tipo: 'seguro_art', estado: 'pendiente' },
+      { prestador_id: prestadorId, tipo: 'identidad', estado: 'pendiente' },
     ])
 
     setGuardando(false)

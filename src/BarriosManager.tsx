@@ -56,11 +56,12 @@ export function BarriosManager({ prestadorId }: { prestadorId: string }) {
       setError(pbErr.message)
       return
     }
-    await supabase.from('verificacion').insert([
-      { prestador_id: prestadorId, barrio_id: barrioId, tipo: 'antecedentes_penales', estado: 'pendiente' },
-      { prestador_id: prestadorId, barrio_id: barrioId, tipo: 'seguro_art', estado: 'pendiente' },
-      { prestador_id: prestadorId, barrio_id: barrioId, tipo: 'identidad', estado: 'pendiente' },
-    ])
+    // Sumar un barrio NO crea documentación nueva: los antecedentes y la
+    // identidad son hechos sobre una persona, y el seguro es una póliza —
+    // ninguno cambia por trabajar en otro barrio. Antes se duplicaban acá, y
+    // una copia vieja vencida convivía con la vigente, generando alertas
+    // falsas. Lo que sí puede variar por barrio es QUÉ se exige, y eso vive
+    // en barrio.requiere_* (todavía sin UI).
     setBarrioId('')
     setAgregando(false)
     cargar()
