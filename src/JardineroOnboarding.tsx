@@ -28,7 +28,7 @@ const SUBTITULOS: Record<Seccion, string> = {
   panel: 'Todo lo que necesitás para gestionar tu trabajo en GreenGate, de un vistazo.',
   perfil: 'Actualizá tus datos. Los cambios se reflejan en el directorio al instante.',
   equipo: 'Si trabajás con otras personas, sumalas acá para que cada una tenga su propia verificación.',
-  solicitudes: 'Pedidos de contacto que te dejaron los propietarios.',
+  solicitudes: 'Pedidos de presupuesto de los propietarios. Respondé con tu precio.',
 }
 
 type BarrioOpt = { id: string; nombre: string }

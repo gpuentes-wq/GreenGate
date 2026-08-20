@@ -2,10 +2,14 @@ import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import { EmptyState } from './ui'
 
+// El celular del propietario no viaja hasta acá: para cotizar no hace falta, y
+// el contacto va en la otra dirección — el propietario compara los presupuestos
+// que recibió y llama al que elige. Lo que sí necesita saber el jardinero es de
+// qué barrio viene el pedido, porque condiciona la distancia y el ingreso.
 type Solicitud = {
   id: string
   contacto_nombre: string | null
-  contacto_celular: string | null
+  barrio_id: string | null
   mensaje: string | null
   estado: string
   monto_presupuestado: number | null
@@ -56,6 +60,7 @@ function Cotizar({
 
 export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
+  const [barrios, setBarrios] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -64,11 +69,24 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
       setLoading(true)
       const { data, error } = await supabase
         .from('solicitud')
-        .select('id,contacto_nombre,contacto_celular,mensaje,estado,monto_presupuestado,created_at')
+        .select('id,contacto_nombre,barrio_id,mensaje,estado,monto_presupuestado,created_at')
         .eq('prestador_id', prestadorId)
         .order('created_at', { ascending: false })
-      if (error) setError(error.message)
-      else setSolicitudes((data as Solicitud[]) ?? [])
+      if (error) {
+        setError(error.message)
+        setLoading(false)
+        return
+      }
+      const filas = (data as Solicitud[]) ?? []
+      setSolicitudes(filas)
+
+      const ids = [...new Set(filas.map((s) => s.barrio_id).filter((x): x is string => !!x))]
+      if (ids.length > 0) {
+        const { data: bData } = await supabase.from('barrio').select('id,nombre').in('id', ids)
+        const mapa: Record<string, string> = {}
+        for (const b of (bData as Array<{ id: string; nombre: string }>) ?? []) mapa[b.id] = b.nombre
+        setBarrios(mapa)
+      }
       setLoading(false)
     }
     cargar()
@@ -95,7 +113,7 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
       </p>
       {solicitudes.length === 0 ? (
         <EmptyState>
-          Todavía no recibiste solicitudes. Cuando un propietario te contacte desde el directorio, vas a verlas acá.
+          Todavía no recibiste pedidos de presupuesto. Cuando un propietario te elija desde el directorio, vas a verlos acá.
         </EmptyState>
       ) : (
         <div className="space-y-3">
@@ -107,7 +125,9 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
                   {s.estado}
                 </span>
               </div>
-              {s.contacto_celular && <div className="mt-1 text-sm text-gray-600">📞 {s.contacto_celular}</div>}
+              {s.barrio_id && barrios[s.barrio_id] && (
+                <div className="mt-1 text-sm text-gray-600">🏘️ {barrios[s.barrio_id]}</div>
+              )}
               {s.mensaje && <p className="mt-2 text-sm text-gray-600">“{s.mensaje}”</p>}
               <div className="mt-1 text-xs text-gray-400">{new Date(s.created_at).toLocaleDateString('es-AR')}</div>
 
@@ -115,8 +135,8 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
               {s.estado === 'aceptada' && (
                 <p className="mt-2 text-sm font-medium text-gg-dark">
                   ✓ Presupuestaste
-                  {s.monto_presupuestado != null ? ` ARS ${s.monto_presupuestado.toLocaleString('es-AR')}` : ''} —
-                  contactá al vecino{s.contacto_celular ? ` al ${s.contacto_celular}` : ''}.
+                  {s.monto_presupuestado != null ? ` ARS ${s.monto_presupuestado.toLocaleString('es-AR')}` : ''} — si el
+                  vecino te elige, se va a contactar con vos.
                 </p>
               )}
             </div>
