@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from './lib/supabase'
 import { Modal, Campo, inputClass } from './ui'
+import { recordarPedido } from './misPedidos'
 
 export function PedirPresupuestoModal({
   prestadores,
@@ -27,8 +28,29 @@ export function PedirPresupuestoModal({
     }
     setEnviando(true)
     setError(null)
+
+    // Un pedido agrupa las N cotizaciones: es lo que después permite
+    // compararlas entre sí en "Mis presupuestos".
+    const { data: ped, error: pedErr } = await supabase
+      .from('pedido')
+      .insert({
+        barrio_id: barrioId,
+        descripcion: mensaje.trim() || null,
+        contacto_nombre: nombre.trim(),
+        contacto_celular: celular.trim(),
+      })
+      .select('id')
+      .single()
+    if (pedErr || !ped) {
+      setEnviando(false)
+      setError(pedErr?.message ?? 'No se pudo crear el pedido')
+      return
+    }
+    const pedidoId = (ped as { id: string }).id
+
     const { error } = await supabase.from('solicitud').insert(
       prestadores.map((p) => ({
+        pedido_id: pedidoId,
         prestador_id: p.id,
         barrio_id: barrioId,
         contacto_nombre: nombre.trim(),
@@ -41,6 +63,7 @@ export function PedirPresupuestoModal({
       setError(error.message)
       return
     }
+    recordarPedido(pedidoId)
     onEnviado()
   }
 

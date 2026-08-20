@@ -8,6 +8,7 @@ type Solicitud = {
   contacto_celular: string | null
   mensaje: string | null
   estado: string
+  monto_presupuestado: number | null
   created_at: string
 }
 
@@ -15,6 +16,42 @@ const ESTADO_BADGE: Record<string, string> = {
   pendiente: 'bg-amber-100 text-amber-700',
   aceptada: 'bg-gg-light text-gg-dark',
   rechazada: 'bg-gray-100 text-gray-500',
+}
+
+// El monto vive en su propio estado por fila: si estuviera en el componente
+// padre, escribir en una solicitud pisaría lo tipeado en las demás.
+function Cotizar({
+  solicitudId,
+  onResponder,
+}: {
+  solicitudId: string
+  onResponder: (id: string, estado: string, monto?: number | null) => void
+}) {
+  const [monto, setMonto] = useState('')
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      <input
+        type="number"
+        min="0"
+        value={monto}
+        onChange={(e) => setMonto(e.target.value)}
+        placeholder="Tu presupuesto (ARS)"
+        className="w-44 rounded-lg border border-gray-300 px-3 py-1 text-sm focus:border-gg-green focus:outline-none"
+      />
+      <button
+        onClick={() => onResponder(solicitudId, 'aceptada', monto ? Number(monto) : null)}
+        className="rounded-lg bg-gg-green px-3 py-1 text-sm font-medium text-white hover:bg-gg-dark"
+      >
+        Presupuestar
+      </button>
+      <button
+        onClick={() => onResponder(solicitudId, 'rechazada')}
+        className="rounded-lg border border-gray-300 px-3 py-1 text-sm text-gray-600 hover:bg-gray-50"
+      >
+        Rechazar
+      </button>
+    </div>
+  )
 }
 
 export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
@@ -27,7 +64,7 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
       setLoading(true)
       const { data, error } = await supabase
         .from('solicitud')
-        .select('id,contacto_nombre,contacto_celular,mensaje,estado,created_at')
+        .select('id,contacto_nombre,contacto_celular,mensaje,estado,monto_presupuestado,created_at')
         .eq('prestador_id', prestadorId)
         .order('created_at', { ascending: false })
       if (error) setError(error.message)
@@ -37,9 +74,12 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
     cargar()
   }, [prestadorId])
 
-  async function responder(id: string, estado: string) {
-    setSolicitudes((s) => s.map((x) => (x.id === id ? { ...x, estado } : x)))
-    const { error } = await supabase.from('solicitud').update({ estado }).eq('id', id)
+  // Aceptar y cotizar es un solo movimiento: sin monto, el propietario no
+  // tiene nada que comparar entre los prestadores que eligió.
+  async function responder(id: string, estado: string, monto?: number | null) {
+    const cambios = estado === 'aceptada' ? { estado, monto_presupuestado: monto ?? null } : { estado }
+    setSolicitudes((s) => s.map((x) => (x.id === id ? { ...x, ...cambios } : x)))
+    const { error } = await supabase.from('solicitud').update(cambios).eq('id', id)
     if (error) setError(error.message)
   }
 
@@ -71,25 +111,12 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
               {s.mensaje && <p className="mt-2 text-sm text-gray-600">“{s.mensaje}”</p>}
               <div className="mt-1 text-xs text-gray-400">{new Date(s.created_at).toLocaleDateString('es-AR')}</div>
 
-              {s.estado === 'pendiente' && (
-                <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={() => responder(s.id, 'aceptada')}
-                    className="rounded-lg bg-gg-green px-3 py-1 text-sm font-medium text-white hover:bg-gg-dark"
-                  >
-                    Aceptar
-                  </button>
-                  <button
-                    onClick={() => responder(s.id, 'rechazada')}
-                    className="rounded-lg border border-gray-300 px-3 py-1 text-sm text-gray-600 hover:bg-gray-50"
-                  >
-                    Rechazar
-                  </button>
-                </div>
-              )}
+              {s.estado === 'pendiente' && <Cotizar solicitudId={s.id} onResponder={responder} />}
               {s.estado === 'aceptada' && (
                 <p className="mt-2 text-sm font-medium text-gg-dark">
-                  ✓ Aceptaste — contactá al vecino{s.contacto_celular ? ` al ${s.contacto_celular}` : ''}.
+                  ✓ Presupuestaste
+                  {s.monto_presupuestado != null ? ` ARS ${s.monto_presupuestado.toLocaleString('es-AR')}` : ''} —
+                  contactá al vecino{s.contacto_celular ? ` al ${s.contacto_celular}` : ''}.
                 </p>
               )}
             </div>

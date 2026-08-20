@@ -6,6 +6,8 @@ import { Insignia, EmptyState } from './ui'
 import { PedirPresupuestoModal } from './PedirPresupuestoModal'
 import { ProponerPrestadorModal } from './ProponerPrestadorModal'
 import { PerfilJardinero } from './PerfilJardinero'
+import { MisPresupuestos } from './MisPresupuestos'
+import { misPedidos } from './misPedidos'
 import { badgesPrestador, prestadorVerificado, type VerificacionRow, type IntegranteRow } from './verificacion'
 
 type Extra = { tarifa: number | null; experiencia: number | null }
@@ -15,7 +17,12 @@ type PrestadorBarrioRow = { prestador_id: string; barrio_id: string; habilitado:
 // barrioInicial llega de la pantalla de selección de rol; el selector de barrio
 // se mantiene igual, para poder cambiar sin volver al inicio.
 export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioInicial?: string }) {
-  const [vista, setVista] = useState<{ tipo: 'listado' } | { tipo: 'perfil'; prestadorId: string }>({ tipo: 'listado' })
+  const [vista, setVista] = useState<
+    { tipo: 'listado' } | { tipo: 'perfil'; prestadorId: string } | { tipo: 'presupuestos' }
+  >({ tipo: 'listado' })
+  // El acceso a "Mis presupuestos" solo aparece si este navegador pidió alguno:
+  // sin login, no hay nada que mostrarle a quien entra por primera vez.
+  const [hayPedidos, setHayPedidos] = useState(() => misPedidos().length > 0)
 
   const [barrios, setBarrios] = useState<BarrioOpt[]>([])
   const [barrioId, setBarrioId] = useState(barrioInicial)
@@ -124,14 +131,31 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
     return <PerfilJardinero prestadorId={vista.prestadorId} onVolver={() => setVista({ tipo: 'listado' })} />
   }
 
+  if (vista.tipo === 'presupuestos') {
+    return <MisPresupuestos onVolver={() => setVista({ tipo: 'listado' })} />
+  }
+
   const seleccionadosInfo = prestadores.filter((p) => seleccionados.has(p.id)).map((p) => ({ id: p.id, nombre: nombreDe(p) }))
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8 pb-24">
-      <h1 className="text-xl font-semibold text-gg-dark">Encontrá tu jardinero</h1>
-      <p className="mb-6 text-sm text-gray-500">
-        Jardineros verificados por la administración de tu barrio. Compará puntaje, especialidad y precio.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-gg-dark">Encontrá tu jardinero</h1>
+          <p className="mb-6 text-sm text-gray-500">
+            Jardineros verificados por la administración de tu barrio. Compará puntaje, especialidad y precio.
+          </p>
+        </div>
+        {hayPedidos && (
+          <button
+            type="button"
+            onClick={() => setVista({ tipo: 'presupuestos' })}
+            className="text-sm font-medium text-gg-green hover:underline"
+          >
+            Mis presupuestos →
+          </button>
+        )}
+      </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-4">
         <label className="flex items-center gap-2 text-sm text-gray-600">
@@ -319,6 +343,7 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
             })
             setSeleccionados(new Set())
             setModalPresupuesto(false)
+            setHayPedidos(true)
           }}
         />
       )}
