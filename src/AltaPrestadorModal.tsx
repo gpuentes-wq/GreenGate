@@ -25,6 +25,7 @@ export function AltaPrestadorModal({
   const [apellido, setApellido] = useState('')
   const [razonSocial, setRazonSocial] = useState('')
   const [celular, setCelular] = useState('')
+  const [documento, setDocumento] = useState('')
   const [condicion, setCondicion] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,6 +40,13 @@ export function AltaPrestadorModal({
       setError('El celular es obligatorio')
       return
     }
+    // Obligatorio igual que en el alta del jardinero: sin DNI no hay contra qué
+    // validar la identidad, y el prestador quedaría con un dato que el propio
+    // jardinero tendría que completar después para poder guardar su perfil.
+    if (!documento.trim()) {
+      setError(esEmpresa ? 'El DNI del contacto es obligatorio' : 'El DNI es obligatorio')
+      return
+    }
     setGuardando(true)
     setError(null)
 
@@ -50,6 +58,7 @@ export function AltaPrestadorModal({
         razon_social: esEmpresa ? razonSocial.trim() : null,
         es_empresa: esEmpresa,
         celular: celular.trim(),
+        documento: documento.trim(),
         tipo_servicio_principal: SERVICIO_PRINCIPAL,
         condicion_fiscal: condicion || null,
         origen: 'alta_administracion',
@@ -111,9 +120,14 @@ export function AltaPrestadorModal({
           </div>
         )}
 
-        <Campo label="Celular *">
-          <input className={inputClass} value={celular} onChange={(e) => setCelular(e.target.value)} placeholder="+54 9 11 ..." />
-        </Campo>
+        <div className="grid grid-cols-2 gap-3">
+          <Campo label="Celular *">
+            <input className={inputClass} value={celular} onChange={(e) => setCelular(e.target.value)} placeholder="+54 9 11 ..." />
+          </Campo>
+          <Campo label={esEmpresa ? 'DNI del contacto *' : 'DNI *'}>
+            <input className={inputClass} value={documento} onChange={(e) => setDocumento(e.target.value)} />
+          </Campo>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           {/* Fijo en esta etapa, igual que en el alta del jardinero. */}

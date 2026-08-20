@@ -38,6 +38,12 @@ export function IntegrantesManager({ prestadorId }: { prestadorId: string }) {
       setError('El nombre es obligatorio')
       return
     }
+    // El DNI es obligatorio: es contra ese número que la administración valida
+    // los antecedentes y la identidad de esta persona en particular.
+    if (!documento.trim()) {
+      setError('El DNI es obligatorio para poder verificar a esta persona')
+      return
+    }
     setAgregando(true)
     setError(null)
     const { data, error: iErr } = await supabase
@@ -114,7 +120,7 @@ export function IntegrantesManager({ prestadorId }: { prestadorId: string }) {
             <input className={inputClass} value={apellido} onChange={(e) => setApellido(e.target.value)} />
           </Campo>
         </div>
-        <Campo label="DNI (opcional)">
+        <Campo label="DNI *">
           <input className={inputClass} value={documento} onChange={(e) => setDocumento(e.target.value)} />
         </Campo>
         {error && <p className="text-sm text-red-600">{error}</p>}

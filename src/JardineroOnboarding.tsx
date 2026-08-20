@@ -45,7 +45,7 @@ export default function JardineroOnboarding({ prestadorInicial = null }: { prest
   const [razonSocial, setRazonSocial] = useState('')
   const [celular, setCelular] = useState('')
   const [email, setEmail] = useState('')
-  const [domicilio, setDomicilio] = useState('')
+  const [documento, setDocumento] = useState('')
   const [servicioPrincipal, setServicioPrincipal] = useState('jardineria')
   const [especialidades, setEspecialidades] = useState<string[]>([])
   const [experiencia, setExperiencia] = useState('')
@@ -77,7 +77,7 @@ export default function JardineroOnboarding({ prestadorInicial = null }: { prest
     setRazonSocial('')
     setCelular('')
     setEmail('')
-    setDomicilio('')
+    setDocumento('')
     setServicioPrincipal('jardineria')
     setEspecialidades([])
     setExperiencia('')
@@ -117,7 +117,7 @@ export default function JardineroOnboarding({ prestadorInicial = null }: { prest
     setRazonSocial((pr.razon_social as string) ?? '')
     setCelular((pr.celular as string) ?? '')
     setEmail((pr.email as string) ?? '')
-    setDomicilio((pr.domicilio as string) ?? '')
+    setDocumento((pr.documento as string) ?? '')
     setServicioPrincipal((pr.tipo_servicio_principal as string) ?? 'jardineria')
     setEspecialidades(((esp as { tipo: string }[]) ?? []).map((e) => e.tipo))
     setExperiencia(pr.anios_experiencia != null ? String(pr.anios_experiencia) : '')
@@ -147,6 +147,12 @@ export default function JardineroOnboarding({ prestadorInicial = null }: { prest
       setError('Un teléfono de contacto es obligatorio')
       return
     }
+    // Obligatorio: sin DNI la administración no tiene contra qué validar la
+    // verificación de identidad, que es uno de los tres papeles del proceso.
+    if (!documento.trim()) {
+      setError(esEmpresa ? 'El DNI del contacto es obligatorio' : 'Tu DNI es obligatorio')
+      return
+    }
     setGuardando(true)
     setError(null)
     setOkEditar(false)
@@ -158,7 +164,7 @@ export default function JardineroOnboarding({ prestadorInicial = null }: { prest
       es_empresa: esEmpresa,
       celular: celular.trim(),
       email: email.trim() || null,
-      domicilio: domicilio.trim() || null,
+      documento: documento.trim() || null,
       cuit_cuil: cuit.trim() || null,
       condicion_fiscal: condicion || null,
       tipo_servicio_principal: servicioPrincipal,
@@ -321,8 +327,12 @@ export default function JardineroOnboarding({ prestadorInicial = null }: { prest
                   <input type="email" className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} />
                 </Campo>
               </div>
-              <Campo label="Domicilio">
-                <input className={inputClass} value={domicilio} onChange={(e) => setDomicilio(e.target.value)} />
+              {/* Reemplaza al domicilio, que no consumía ninguna pantalla. El DNI sí
+                  tiene uso: es contra ese número que la administración valida la
+                  verificación de identidad. Si es empresa, es el del contacto —
+                  la misma persona cuyo nombre pide el campo de arriba. */}
+              <Campo label={esEmpresa ? 'DNI del contacto *' : 'DNI *'}>
+                <input className={inputClass} value={documento} onChange={(e) => setDocumento(e.target.value)} />
               </Campo>
             </fieldset>
 
