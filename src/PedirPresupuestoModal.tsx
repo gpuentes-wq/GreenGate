@@ -15,15 +15,17 @@ export function PedirPresupuestoModal({
   onEnviado: () => void
 }) {
   const [nombre, setNombre] = useState('')
-  const [celular, setCelular] = useState('')
   const [mensaje, setMensaje] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // No se pide el celular: el jardinero nunca lo recibe y el contacto va en
+  // sentido inverso — el propietario compara los presupuestos y escribe por
+  // WhatsApp al que elige, desde "Mis presupuestos".
   async function enviar(e: FormEvent) {
     e.preventDefault()
-    if (!nombre.trim() || !celular.trim()) {
-      setError('Dejá tu nombre y un teléfono de contacto')
+    if (!nombre.trim()) {
+      setError('Dejá tu nombre para que el jardinero sepa quién pide')
       return
     }
     setEnviando(true)
@@ -37,7 +39,6 @@ export function PedirPresupuestoModal({
         barrio_id: barrioId,
         descripcion: mensaje.trim() || null,
         contacto_nombre: nombre.trim(),
-        contacto_celular: celular.trim(),
       })
       .select('id')
       .single()
@@ -54,7 +55,6 @@ export function PedirPresupuestoModal({
         prestador_id: p.id,
         barrio_id: barrioId,
         contacto_nombre: nombre.trim(),
-        contacto_celular: celular.trim(),
         mensaje: mensaje.trim() || null,
       })),
     )
@@ -75,9 +75,6 @@ export function PedirPresupuestoModal({
         </p>
         <Campo label="Tu nombre *">
           <input className={inputClass} value={nombre} onChange={(e) => setNombre(e.target.value)} autoFocus />
-        </Campo>
-        <Campo label="Tu celular *">
-          <input className={inputClass} value={celular} onChange={(e) => setCelular(e.target.value)} placeholder="+54 9 11 ..." />
         </Campo>
         <Campo label="Mensaje (opcional)">
           <textarea

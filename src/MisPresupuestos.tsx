@@ -3,7 +3,7 @@ import { supabase } from './lib/supabase'
 import { EmptyState } from './ui'
 import { misPedidos } from './misPedidos'
 
-type Pedido = { id: string; descripcion: string | null; created_at: string }
+type Pedido = { id: string; barrio_id: string | null; descripcion: string | null; created_at: string }
 type Cotizacion = {
   id: string
   pedido_id: string
@@ -32,12 +32,36 @@ function nombreDe(p: PrestadorLite): string {
   return p.apellido ? `${p.nombre} ${p.apellido}` : p.nombre
 }
 
+// wa.me espera solo dígitos con código de país: nada de "+", espacios ni guiones.
+// Los celulares se cargan a mano y vienen con formatos variados ("+54 9 11
+// 6666-3001", "11 6666 3001"), así que se limpia y, si falta el código de país,
+// se asume Argentina — el producto opera solo en el GBA.
+function paraWhatsApp(celular: string): string {
+  const digitos = celular.replace(/\D/g, '')
+  return digitos.startsWith('54') ? digitos : `54${digitos}`
+}
+
+// El jardinero recibe un mensaje de un número que no conoce, y puede haber
+// presupuestado varios pedidos: el texto le recuerda de cuál se trata y qué
+// precio pasó, así no tiene que ir a buscarlo a la app.
+function mensajeWhatsApp(barrio: string | null, descripcion: string | null, monto: number | null): string {
+  const partes = [`Hola! Te escribo por GreenGate, pedí presupuesto de jardinería en ${barrio ?? 'mi barrio'}.`]
+  if (descripcion) partes.push(`Mi pedido fue: "${descripcion}".`)
+  if (monto != null) partes.push(`Me pasaste un presupuesto de ARS ${monto.toLocaleString('es-AR')}.`)
+  return partes.join(' ')
+}
+
 // Los presupuestos que pidió este propietario. Sin login, los pedidos se
 // identifican por los ids guardados en este navegador (ver misPedidos.ts).
 export function MisPresupuestos({ onVolver }: { onVolver: () => void }) {
   const [pedidos, setPedidos] = useState<Pedido[]>([])
   const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>([])
   const [prestadores, setPrestadores] = useState<Record<string, PrestadorLite>>({})
+  const [barrios, setBarrios] = useState<Record<string, string>>({})
+  // Celulares de los prestadores que YA aceptaron, y solo de ellos. El
+  // directorio público (prestador_directorio) no expone el teléfono a
+  // propósito: se conoce recién cuando hay un presupuesto de por medio.
+  const [celulares, setCelulares] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -49,7 +73,11 @@ export function MisPresupuestos({ onVolver }: { onVolver: () => void }) {
         return
       }
       const [pRes, sRes] = await Promise.all([
-        supabase.from('pedido').select('id,descripcion,created_at').in('id', ids).order('created_at', { ascending: false }),
+        supabase
+          .from('pedido')
+          .select('id,barrio_id,descripcion,created_at')
+          .in('id', ids)
+          .order('created_at', { ascending: false }),
         supabase.from('solicitud').select('id,pedido_id,prestador_id,estado,monto_presupuestado').in('pedido_id', ids),
       ])
       if (pRes.error || sRes.error) {
@@ -58,8 +86,30 @@ export function MisPresupuestos({ onVolver }: { onVolver: () => void }) {
         return
       }
       const cots = (sRes.data as Cotizacion[]) ?? []
-      setPedidos((pRes.data as Pedido[]) ?? [])
+      const peds = (pRes.data as Pedido[]) ?? []
+      setPedidos(peds)
       setCotizaciones(cots)
+
+      // Nombre del barrio: va en el mensaje precargado de WhatsApp, para que el
+      // jardinero entienda de qué se trata al recibir un número desconocido.
+      const barrioIds = [...new Set(peds.map((p) => p.barrio_id).filter((x): x is string => !!x))]
+      if (barrioIds.length > 0) {
+        const { data } = await supabase.from('barrio').select('id,nombre').in('id', barrioIds)
+        const mapa: Record<string, string> = {}
+        for (const b of (data as Array<{ id: string; nombre: string }>) ?? []) mapa[b.id] = b.nombre
+        setBarrios(mapa)
+      }
+
+      // Consulta acotada: solo los prestadores que aceptaron, no todos los del pedido.
+      const aceptaronIds = [...new Set(cots.filter((c) => c.estado === 'aceptada').map((c) => c.prestador_id))]
+      if (aceptaronIds.length > 0) {
+        const { data } = await supabase.from('prestador').select('id,celular').in('id', aceptaronIds)
+        const mapa: Record<string, string> = {}
+        for (const p of (data as Array<{ id: string; celular: string | null }>) ?? []) {
+          if (p.celular) mapa[p.id] = p.celular
+        }
+        setCelulares(mapa)
+      }
 
       const prestadorIds = [...new Set(cots.map((c) => c.prestador_id))]
       if (prestadorIds.length > 0) {
@@ -141,6 +191,24 @@ export function MisPresupuestos({ onVolver }: { onVolver: () => void }) {
                             <span className="text-gray-400">{ESTADO_LABEL[c.estado] ?? c.estado}</span>
                           )}
                         </span>
+                        {/* Solo para quien ya presupuestó: el contacto se abre cuando
+                            hay una cotización de por medio, no antes. */}
+                        {c.estado === 'aceptada' && celulares[c.prestador_id] && (
+                          <a
+                            href={`https://wa.me/${paraWhatsApp(celulares[c.prestador_id])}?text=${encodeURIComponent(
+                              mensajeWhatsApp(
+                                (pedido.barrio_id && barrios[pedido.barrio_id]) || null,
+                                pedido.descripcion,
+                                c.monto_presupuestado,
+                              ),
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full rounded-lg bg-gg-green px-3 py-1.5 text-center text-sm font-medium text-white transition hover:bg-gg-dark sm:w-auto"
+                          >
+                            Contactar por WhatsApp
+                          </a>
+                        )}
                       </div>
                     )
                   })}
@@ -148,8 +216,8 @@ export function MisPresupuestos({ onVolver }: { onVolver: () => void }) {
 
                 {conMonto.length > 1 && (
                   <p className="mt-3 text-xs text-gray-500">
-                    Compará precio y puntaje: el más barato no siempre es el mejor. Contactá al que elijas por su
-                    teléfono, desde su perfil en el directorio.
+                    Compará precio y puntaje: el más barato no siempre es el mejor. Cuando decidas, escribile por
+                    WhatsApp desde el botón de su presupuesto.
                   </p>
                 )}
               </section>

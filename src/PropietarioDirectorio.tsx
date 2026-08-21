@@ -37,6 +37,9 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
   const [error, setError] = useState<string | null>(null)
 
   const [soloVerificados, setSoloVerificados] = useState(false)
+  // Lo prende y apaga el propio jardinero según su disponibilidad del día
+  // (ver el switch en JardineroPanel), así que la lista cambia sola.
+  const [soloUrgencias, setSoloUrgencias] = useState(false)
   const [busqueda, setBusqueda] = useState('')
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
   const [enviados, setEnviados] = useState<Record<string, boolean>>({})
@@ -111,12 +114,15 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
     if (soloVerificados) {
       l = l.filter((p) => prestadorVerificado(verifs[p.id] ?? [], integrantes[p.id] ?? []))
     }
+    if (soloUrgencias) {
+      l = l.filter((p) => p.disponible_urgencia)
+    }
     const q = busqueda.trim().toLowerCase()
     if (q) {
       l = l.filter((p) => nombreDe(p).toLowerCase().includes(q))
     }
     return l.sort((a, b) => (b.puntaje_promedio ?? -1) - (a.puntaje_promedio ?? -1))
-  }, [prestadores, barrioId, habilitadosEnBarrio, soloVerificados, busqueda, verifs, integrantes])
+  }, [prestadores, barrioId, habilitadosEnBarrio, soloVerificados, soloUrgencias, busqueda, verifs, integrantes])
 
   function toggleSeleccion(id: string) {
     setSeleccionados((s) => {
@@ -191,6 +197,15 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
               />
               Solo verificados
             </label>
+            <label className="flex items-center gap-2 text-sm text-gray-600">
+              <input
+                type="checkbox"
+                checked={soloUrgencias}
+                onChange={(e) => setSoloUrgencias(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              ⚡ Solo urgencias
+            </label>
             <span className="text-sm text-gray-400">{lista.length} jardineros</span>
           </>
         )}
@@ -227,6 +242,12 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
                       className="font-semibold text-gray-900 hover:underline"
                     >
                       {nombre}
+                      {/* Mismo estilo y texto que la insignia del panel de administración. */}
+                      {p.disponible_urgencia && (
+                        <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                          ⚡ Urgencia
+                        </span>
+                      )}
                     </button>
                     <div className="text-sm text-gray-500">{servicioLabel(p.tipo_servicio_principal)}</div>
                   </div>
