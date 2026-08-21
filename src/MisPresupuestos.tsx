@@ -53,7 +53,7 @@ function mensajeWhatsApp(barrio: string | null, descripcion: string | null, mont
 
 // Los presupuestos que pidió este propietario. Sin login, los pedidos se
 // identifican por los ids guardados en este navegador (ver misPedidos.ts).
-export function MisPresupuestos({ onVolver }: { onVolver: () => void }) {
+export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVolver: () => void }) {
   const [pedidos, setPedidos] = useState<Pedido[]>([])
   const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>([])
   const [prestadores, setPrestadores] = useState<Record<string, PrestadorLite>>({})
@@ -86,7 +86,10 @@ export function MisPresupuestos({ onVolver }: { onVolver: () => void }) {
         return
       }
       const cots = (sRes.data as Cotizacion[]) ?? []
-      const peds = (pRes.data as Pedido[]) ?? []
+      // Solo los pedidos del barrio elegido: la pantalla vive dentro del
+      // directorio de ese barrio. Cuando exista el login, el propietario va a
+      // estar asociado a un barrio y este filtro se vuelve implícito.
+      const peds = ((pRes.data as Pedido[]) ?? []).filter((p) => p.barrio_id === barrioId)
       setPedidos(peds)
       setCotizaciones(cots)
 
@@ -123,8 +126,9 @@ export function MisPresupuestos({ onVolver }: { onVolver: () => void }) {
       }
       setLoading(false)
     }
+    setLoading(true)
     cargar()
-  }, [])
+  }, [barrioId])
 
   if (loading) return <p className="text-gray-500">Cargando…</p>
 
@@ -143,8 +147,8 @@ export function MisPresupuestos({ onVolver }: { onVolver: () => void }) {
 
       {pedidos.length === 0 ? (
         <EmptyState>
-          Todavía no pediste ningún presupuesto desde este dispositivo. Cuando pidas uno en el directorio, vas a
-          poder comparar las respuestas acá.
+          Todavía no pediste presupuestos en este barrio. Cuando pidas uno en el directorio, vas a poder comparar
+          las respuestas acá.
         </EmptyState>
       ) : (
         <div className="space-y-6">

@@ -138,7 +138,7 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
   }
 
   if (vista.tipo === 'presupuestos') {
-    return <MisPresupuestos onVolver={() => setVista({ tipo: 'listado' })} />
+    return <MisPresupuestos barrioId={barrioId} onVolver={() => setVista({ tipo: 'listado' })} />
   }
 
   const seleccionadosInfo = prestadores.filter((p) => seleccionados.has(p.id)).map((p) => ({ id: p.id, nombre: nombreDe(p) }))
