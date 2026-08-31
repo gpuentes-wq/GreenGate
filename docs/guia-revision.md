@@ -74,7 +74,7 @@ Un detalle que conviene saber antes de probar: **"Mis presupuestos" solo aparece
 
 Tres caminos, según cuánto quieras profundizar:
 
-- **Formulario** (2 minutos): https://forms.gle/1YCwFRAU8JYeH8QC7 — el mismo de la landing. Te pregunta desde qué rol mirás y tiene un campo abierto al final.
+- **Formulario** (2 minutos): https://forms.gle/s6tY6Z2hvVLqiS2J6 — el mismo de la landing. Te pregunta desde qué rol mirás y tiene un campo abierto al final.
 - **Directo a Gustavo**, por el canal que ya tengan. Es lo más rápido para ida y vuelta.
 - **Un Issue en GitHub**, si preferís dejarlo por escrito y trazable.
 
