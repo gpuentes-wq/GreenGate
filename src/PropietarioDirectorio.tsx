@@ -317,7 +317,7 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
                         onChange={() => toggleSeleccion(p.id)}
                         className="h-4 w-4 rounded border-gray-300"
                       />
-                      Seleccionar para pedir presupuesto
+                      Seleccionar para pedir visita
                     </label>
                   )}
                 </div>
@@ -345,7 +345,7 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
               onClick={() => setModalPresupuesto(true)}
               className="rounded-lg bg-gg-green px-4 py-2 text-sm font-medium text-white hover:bg-gg-dark"
             >
-              Pedir presupuesto ({seleccionados.size})
+              Pedir visita ({seleccionados.size})
             </button>
           </div>
         </div>

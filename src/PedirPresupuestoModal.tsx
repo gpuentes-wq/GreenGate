@@ -20,8 +20,8 @@ export function PedirPresupuestoModal({
   const [error, setError] = useState<string | null>(null)
 
   // No se pide el celular: el jardinero nunca lo recibe y el contacto va en
-  // sentido inverso — el propietario compara los presupuestos y escribe por
-  // WhatsApp al que elige, desde "Mis presupuestos".
+  // sentido inverso — el propietario compara las respuestas y, cuando elige a
+  // uno, recién ahí se le abre el WhatsApp desde "Mis presupuestos".
   async function enviar(e: FormEvent) {
     e.preventDefault()
     if (!nombre.trim()) {
@@ -31,8 +31,8 @@ export function PedirPresupuestoModal({
     setEnviando(true)
     setError(null)
 
-    // Un pedido agrupa las N cotizaciones: es lo que después permite
-    // compararlas entre sí en "Mis presupuestos".
+    // Un pedido agrupa las N respuestas: es lo que después permite compararlas
+    // entre sí en "Mis presupuestos" y cerrar el pedido al elegir a uno.
     const { data: ped, error: pedErr } = await supabase
       .from('pedido')
       .insert({
@@ -68,21 +68,25 @@ export function PedirPresupuestoModal({
   }
 
   return (
-    <Modal titulo={`Pedir presupuesto a ${prestadores.length} prestador${prestadores.length === 1 ? '' : 'es'}`} onClose={onClose}>
+    <Modal
+      titulo={`Pedir visita a ${prestadores.length} jardinero${prestadores.length === 1 ? '' : 's'}`}
+      onClose={onClose}
+    >
       <form onSubmit={enviar} className="space-y-3">
         <p className="text-sm text-gray-500">
-          Le va a llegar el mismo mensaje a: <strong>{prestadores.map((p) => p.nombre).join(', ')}</strong>.
+          Le va a llegar el mismo pedido a: <strong>{prestadores.map((p) => p.nombre).join(', ')}</strong>. Te van a
+          decir cuándo pueden pasar a ver el jardín; el precio lo acordás con el que elijas.
         </p>
         <Campo label="Tu nombre *">
           <input className={inputClass} value={nombre} onChange={(e) => setNombre(e.target.value)} autoFocus />
         </Campo>
-        <Campo label="Mensaje (opcional)">
+        <Campo label="Qué necesitás (opcional)">
           <textarea
             className={inputClass}
             rows={2}
             value={mensaje}
             onChange={(e) => setMensaje(e.target.value)}
-            placeholder="Ej: necesito mantenimiento semanal del jardín..."
+            placeholder="Ej: mantenimiento del jardín de adelante y del fondo, unos 200 m². Hay un ligustro que necesita poda."
           />
         </Campo>
         {error && <p className="text-sm text-red-600">{error}</p>}
