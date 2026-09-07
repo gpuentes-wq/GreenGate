@@ -27,7 +27,7 @@ const TIPO_LABEL_PERSONA: Record<string, string> = {
 // Ordenado por urgencia, no como una lista plana de tarjetas iguales:
 // 1) Necesita tu atención (solicitudes + vencimientos) — lo único que
 //    cambia sesión a sesión y exige una acción.
-// 2) Tu negocio (puntaje, clientes activos, presupuestos, servicios) — salud general.
+// 2) Tu negocio (puntaje, clientes activos, pedidos respondidos, servicios) — salud general.
 // 3) Tu perfil público (equipo, barrios, servicios y precios) — cambia
 //    poco, es más referencia que algo para chequear cada vez.
 export function JardineroPanel({
@@ -109,7 +109,7 @@ export function JardineroPanel({
       // Solicitudes pendientes (necesitan respuesta).
       const solicitudes = (solRes.data as Array<{ estado: string }>) ?? []
       setPendientes(solicitudes.filter((s) => s.estado === 'pendiente').length)
-      // Presupuestos realizados: solicitudes ya respondidas (no quedaron pendientes).
+      // Pedidos respondidos: solicitudes que ya contestó, con "puedo ir" o con un no.
       // Proxy más cercano disponible hoy — no hay todavía monto de cotización.
       setPresupuestosRealizados(solicitudes.filter((s) => s.estado !== 'pendiente').length)
 
@@ -212,7 +212,7 @@ export function JardineroPanel({
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Tarjeta titulo="Tu puntaje" valor={puntajePromedio != null ? `★ ${puntajePromedio} (${cantidadValoraciones})` : 'Sin reseñas aún'} />
           <Tarjeta titulo="Clientes activos" valor={clientesActivos} />
-          <Tarjeta titulo="Presupuestos realizados" valor={presupuestosRealizados} />
+          <Tarjeta titulo="Pedidos respondidos" valor={presupuestosRealizados} />
           <Tarjeta titulo="Servicios activos" valor={(servicioPrincipal ? 1 : 0) + especialidades.length} />
         </div>
       </section>

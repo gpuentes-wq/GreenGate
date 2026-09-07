@@ -28,7 +28,7 @@ const SUBTITULOS: Record<Seccion, string> = {
   panel: 'Todo lo que necesitás para gestionar tu trabajo en GreenGate, de un vistazo.',
   perfil: 'Actualizá tus datos. Los cambios se reflejan en el directorio al instante.',
   equipo: 'Si trabajás con otras personas, sumalas acá para que cada una tenga su propia verificación.',
-  solicitudes: 'Pedidos de presupuesto de los propietarios. Respondé con tu precio.',
+  solicitudes: 'Vecinos que quieren que veas su jardín. Contestales desde cuándo podés ir.',
 }
 
 type BarrioOpt = { id: string; nombre: string }
@@ -490,7 +490,7 @@ function PanelPreview() {
           <div className="text-lg font-semibold text-gray-400">6</div>
         </div>
         <div className="rounded-lg bg-gray-50 p-3">
-          <div className="text-xs text-gray-400">Presupuestos realizados</div>
+          <div className="text-xs text-gray-400">Pedidos respondidos</div>
           <div className="text-lg font-semibold text-gray-400">9</div>
         </div>
         <div className="rounded-lg bg-gray-50 p-3">

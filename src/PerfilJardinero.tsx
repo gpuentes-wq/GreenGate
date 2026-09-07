@@ -118,7 +118,7 @@ export function PerfilJardinero({ prestadorId, onVolver }: { prestadorId: string
               ))}
             </div>
             <div className="mt-2 text-xs text-gray-500">
-              Estos servicios se cotizan según lo que necesites: pedile un presupuesto.
+              Estos servicios se cotizan según lo que necesites: pedile una visita y lo hablás con él.
             </div>
           </div>
         )}

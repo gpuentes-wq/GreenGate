@@ -66,7 +66,7 @@ function mensajeWhatsApp(barrio: string | null, descripcion: string | null, desd
   return partes.join(' ')
 }
 
-// Los presupuestos que pidió este propietario. Sin login, los pedidos se
+// Los pedidos de visita que hizo este propietario. Sin login, los pedidos se
 // identifican por los ids guardados en este navegador (ver misPedidos.ts).
 export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVolver: () => void }) {
   const [pedidos, setPedidos] = useState<Pedido[]>([])
@@ -189,7 +189,7 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
         ← Volver al directorio
       </button>
 
-      <h1 className="text-xl font-semibold text-gg-dark">Mis presupuestos</h1>
+      <h1 className="text-xl font-semibold text-gg-dark">Mis pedidos</h1>
       <p className="mb-6 text-sm text-gray-500">
         Los jardineros que pueden ir a ver tu jardín. El precio se acuerda en la visita.
       </p>
@@ -198,8 +198,8 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
 
       {pedidos.length === 0 ? (
         <EmptyState>
-          Todavía no pediste presupuestos en este barrio. Cuando pidas uno en el directorio, vas a poder comparar las
-          respuestas acá.
+          Todavía no pediste ninguna visita en este barrio. Cuando pidas una en el directorio, vas a poder comparar
+          las respuestas acá.
         </EmptyState>
       ) : (
         <div className="space-y-6">

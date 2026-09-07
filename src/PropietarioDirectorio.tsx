@@ -20,7 +20,7 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
   const [vista, setVista] = useState<
     { tipo: 'listado' } | { tipo: 'perfil'; prestadorId: string } | { tipo: 'presupuestos' }
   >({ tipo: 'listado' })
-  // El acceso a "Mis presupuestos" solo aparece si este navegador pidió alguno:
+  // El acceso a "Mis pedidos" solo aparece si este navegador pidió alguno:
   // sin login, no hay nada que mostrarle a quien entra por primera vez.
   const [hayPedidos, setHayPedidos] = useState(() => misPedidos().length > 0)
 
@@ -158,7 +158,7 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
             onClick={() => setVista({ tipo: 'presupuestos' })}
             className="text-sm font-medium text-gg-green hover:underline"
           >
-            Mis presupuestos →
+            Mis pedidos →
           </button>
         )}
       </div>
