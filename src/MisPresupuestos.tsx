@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import { EmptyState } from './ui'
 import { misPedidos } from './misPedidos'
-import { disponibilidadLabel } from './labels'
+import { cuandoLabel, ordenDisponibilidad } from './labels'
 
 type Pedido = { id: string; barrio_id: string | null; descripcion: string | null; created_at: string }
 type Cotizacion = {
@@ -11,7 +11,7 @@ type Cotizacion = {
   prestador_id: string
   estado: string
   monto_presupuestado: number | null
-  disponibilidad: string | null
+  disponible_desde: string | null
   detalle: string | null
 }
 type PrestadorLite = {
@@ -51,12 +51,18 @@ function paraWhatsApp(celular: string): string {
 // El jardinero recibe un mensaje de un número que no conoce, y puede estar en
 // varios pedidos a la vez: el texto le recuerda de cuál se trata. Lo que se
 // coordina es la visita, no el cierre — el precio se acuerda viendo el jardín.
-function mensajeWhatsApp(barrio: string | null, descripcion: string | null, cuando: string | null): string {
+function mensajeWhatsApp(barrio: string | null, descripcion: string | null, desde: string | null): string {
   const partes = [`Hola! Te escribo por GreenGate, te elegí para el jardín de mi casa en ${barrio ?? 'mi barrio'}.`]
   if (descripcion) partes.push(`Mi pedido fue: "${descripcion}".`)
-  const label = disponibilidadLabel(cuando)
-  if (label) partes.push(`Me dijiste que podías ir ${label.toLowerCase()}. ¿Coordinamos?`)
-  else partes.push('¿Cuándo te queda cómodo pasar a verlo?')
+  if (desde) {
+    // "Hoy" y "Mañana" ya son adverbios: anteponerles "a partir del" daría
+    // "a partir del mañana". El resto sí lo necesita ("a partir del martes 16/09").
+    const label = cuandoLabel(desde).toLowerCase()
+    const cuando = label === 'hoy' || label === 'mañana' ? label : `a partir del ${label}`
+    partes.push(`Me dijiste que podías ir ${cuando}. ¿Coordinamos?`)
+  } else {
+    partes.push('¿Cuándo te queda cómodo pasar a verlo?')
+  }
   return partes.join(' ')
 }
 
@@ -89,7 +95,7 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
           .order('created_at', { ascending: false }),
         supabase
           .from('solicitud')
-          .select('id,pedido_id,prestador_id,estado,monto_presupuestado,disponibilidad,detalle')
+          .select('id,pedido_id,prestador_id,estado,monto_presupuestado,disponible_desde,detalle')
           .in('pedido_id', ids),
       ])
       if (pRes.error || sRes.error) {
@@ -198,7 +204,17 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
       ) : (
         <div className="space-y-6">
           {pedidos.map((pedido) => {
-            const suyas = cotizaciones.filter((c) => c.pedido_id === pedido.id)
+            // El que puede ir antes va arriba: es el criterio de comparación que
+            // reemplazó al precio, así que tiene que estar a la vista sin buscar.
+            // Los que no pueden ir quedan al final, en el orden que vengan.
+            const suyas = cotizaciones
+              .filter((c) => c.pedido_id === pedido.id)
+              .slice()
+              .sort((a, b) => {
+                const puede = (c: Cotizacion) => (c.estado === 'aceptada' || c.estado === 'elegida' ? 0 : 1)
+                if (puede(a) !== puede(b)) return puede(a) - puede(b)
+                return ordenDisponibilidad(a.disponible_desde) - ordenDisponibilidad(b.disponible_desde)
+              })
             const yaElegido = suyas.some((c) => c.estado === 'elegida')
             return (
               <section key={pedido.id} className="rounded-xl border border-gray-200 bg-white p-5">
@@ -225,7 +241,7 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
                           <span className="text-gray-600">
                             {puedeIr ? (
                               <>
-                                Puede ir <strong>{disponibilidadLabel(c.disponibilidad) ?? 'a coordinar'}</strong>
+                                Puede ir <strong>{cuandoLabel(c.disponible_desde)}</strong>
                               </>
                             ) : (
                               <span className="text-gray-400">{ESTADO_LABEL[c.estado] ?? c.estado}</span>
@@ -267,7 +283,7 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
                                   mensajeWhatsApp(
                                     (pedido.barrio_id && barrios[pedido.barrio_id]) || null,
                                     pedido.descripcion,
-                                    c.disponibilidad,
+                                    c.disponible_desde,
                                   ),
                                 )}`}
                                 target="_blank"

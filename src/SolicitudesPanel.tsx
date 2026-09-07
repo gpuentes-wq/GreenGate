@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import { EmptyState } from './ui'
-import { DISPONIBILIDAD_OPCIONES, disponibilidadLabel } from './labels'
+import { cuandoLabel, hoyISO, sumarDiasISO } from './labels'
 
 // El celular del propietario no viaja hasta acá: para responder no hace falta, y
 // el contacto va en la otra dirección — el propietario compara lo que recibió y
@@ -14,14 +14,14 @@ type Solicitud = {
   mensaje: string | null
   estado: string
   monto_presupuestado: number | null
-  disponibilidad: string | null
+  disponible_desde: string | null
   detalle: string | null
   created_at: string
 }
 
 type Respuesta = {
   estado: string
-  disponibilidad?: string | null
+  disponible_desde?: string | null
   detalle?: string | null
   monto_presupuestado?: number | null
 }
@@ -56,25 +56,26 @@ function Responder({
   solicitudId: string
   onResponder: (id: string, respuesta: Respuesta) => void
 }) {
-  const [disponibilidad, setDisponibilidad] = useState<string>(DISPONIBILIDAD_OPCIONES[0].valor)
+  // Arranca en mañana: es la respuesta más probable y evita un toque. Si el
+  // jardinero prefiere arreglarlo hablando, borra la fecha y queda "a coordinar".
+  const [desde, setDesde] = useState<string>(() => sumarDiasISO(1))
   const [detalle, setDetalle] = useState('')
   const [estimado, setEstimado] = useState('')
 
   return (
     <div className="mt-3 space-y-2 rounded-lg bg-gray-50 p-3">
       <label className="block text-xs font-medium text-gray-600">
-        ¿Cuándo podés ir a verlo?
-        <select
-          value={disponibilidad}
-          onChange={(e) => setDisponibilidad(e.target.value)}
+        ¿Desde cuándo podés ir a verlo?
+        <input
+          type="date"
+          value={desde}
+          min={hoyISO()}
+          onChange={(e) => setDesde(e.target.value)}
           className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-gg-green focus:outline-none"
-        >
-          {DISPONIBILIDAD_OPCIONES.map((o) => (
-            <option key={o.valor} value={o.valor}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+        />
+        <span className="mt-1 block font-normal text-gray-500">
+          No es un turno reservado: es lo antes que podrías pasar. Si preferís coordinarlo, borrá la fecha.
+        </span>
       </label>
 
       <label className="block text-xs font-medium text-gray-600">
@@ -105,7 +106,7 @@ function Responder({
           onClick={() =>
             onResponder(solicitudId, {
               estado: 'aceptada',
-              disponibilidad,
+              disponible_desde: desde || null,
               detalle: detalle.trim() || null,
               monto_presupuestado: estimado ? Number(estimado) : null,
             })
@@ -136,7 +137,7 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
       setLoading(true)
       const { data, error } = await supabase
         .from('solicitud')
-        .select('id,contacto_nombre,barrio_id,mensaje,estado,monto_presupuestado,disponibilidad,detalle,created_at')
+        .select('id,contacto_nombre,barrio_id,mensaje,estado,monto_presupuestado,disponible_desde,detalle,created_at')
         .eq('prestador_id', prestadorId)
         .order('created_at', { ascending: false })
       if (error) {
@@ -201,7 +202,7 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
 
               {s.estado === 'aceptada' && (
                 <p className="mt-2 text-sm text-gg-dark">
-                  ✓ Dijiste que podés ir · <strong>{disponibilidadLabel(s.disponibilidad) ?? 'a coordinar'}</strong>
+                  ✓ Dijiste que podés ir · <strong>{cuandoLabel(s.disponible_desde)}</strong>
                   {s.monto_presupuestado != null && (
                     <> · estimado ARS {s.monto_presupuestado.toLocaleString('es-AR')}</>
                   )}
