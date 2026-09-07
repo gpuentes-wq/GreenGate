@@ -4,7 +4,13 @@ import { EmptyState } from './ui'
 import { misPedidos } from './misPedidos'
 import { cuandoLabel, ordenDisponibilidad } from './labels'
 
-type Pedido = { id: string; barrio_id: string | null; descripcion: string | null; created_at: string }
+type Pedido = {
+  id: string
+  barrio_id: string | null
+  descripcion: string | null
+  es_urgencia: boolean
+  created_at: string
+}
 type Cotizacion = {
   id: string
   pedido_id: string
@@ -90,7 +96,7 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
       const [pRes, sRes] = await Promise.all([
         supabase
           .from('pedido')
-          .select('id,barrio_id,descripcion,created_at')
+          .select('id,barrio_id,descripcion,es_urgencia,created_at')
           .in('id', ids)
           .order('created_at', { ascending: false }),
         supabase
@@ -218,8 +224,13 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
             const yaElegido = suyas.some((c) => c.estado === 'elegida')
             return (
               <section key={pedido.id} className="rounded-xl border border-gray-200 bg-white p-5">
-                <div className="text-xs text-gray-400">
-                  Pedido del {new Date(pedido.created_at).toLocaleDateString('es-AR')}
+                <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <span>Pedido del {new Date(pedido.created_at).toLocaleDateString('es-AR')}</span>
+                  {pedido.es_urgencia && (
+                    <span className="rounded-full bg-red-100 px-2 py-0.5 font-semibold uppercase tracking-wide text-red-700">
+                      ⚡ Urgente
+                    </span>
+                  )}
                 </div>
                 {pedido.descripcion && <p className="mt-1 text-sm text-gray-700">“{pedido.descripcion}”</p>}
 

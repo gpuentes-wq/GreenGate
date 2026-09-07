@@ -141,7 +141,11 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
     return <MisPresupuestos barrioId={barrioId} onVolver={() => setVista({ tipo: 'listado' })} />
   }
 
-  const seleccionadosInfo = prestadores.filter((p) => seleccionados.has(p.id)).map((p) => ({ id: p.id, nombre: nombreDe(p) }))
+  // Se pasa disponible_urgencia para que el modal pueda avisar si el pedido se
+  // marca urgente y alguno de los elegidos no atiende urgencias.
+  const seleccionadosInfo = prestadores
+    .filter((p) => seleccionados.has(p.id))
+    .map((p) => ({ id: p.id, nombre: nombreDe(p), disponible_urgencia: p.disponible_urgencia }))
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8 pb-24">

@@ -17,6 +17,21 @@ type Solicitud = {
   disponible_desde: string | null
   detalle: string | null
   created_at: string
+  // PostgREST embebe el pedido por la FK solicitud.pedido_id. Es null en las
+  // solicitudes viejas, anteriores a que existiera la tabla pedido.
+  pedido: { es_urgencia: boolean } | null
+}
+
+// Sin tipos generados, el cliente de Supabase no sabe que solicitud → pedido es
+// muchos-a-uno y tipa el embebido como array. En runtime llega un objeto, pero
+// se contemplan las dos formas para no depender de ese detalle.
+type SolicitudRow = Omit<Solicitud, 'pedido'> & {
+  pedido: { es_urgencia: boolean } | { es_urgencia: boolean }[] | null
+}
+
+function normalizar(fila: SolicitudRow): Solicitud {
+  const { pedido, ...resto } = fila
+  return { ...resto, pedido: Array.isArray(pedido) ? pedido[0] ?? null : pedido }
 }
 
 type Respuesta = {
@@ -51,14 +66,18 @@ const ESTADO_LABEL: Record<string, string> = {
 // componente padre, escribir en una solicitud pisaría lo tipeado en las demás.
 function Responder({
   solicitudId,
+  urgente,
   onResponder,
 }: {
   solicitudId: string
+  urgente: boolean
   onResponder: (id: string, respuesta: Respuesta) => void
 }) {
-  // Arranca en mañana: es la respuesta más probable y evita un toque. Si el
-  // jardinero prefiere arreglarlo hablando, borra la fecha y queda "a coordinar".
-  const [desde, setDesde] = useState<string>(() => sumarDiasISO(1))
+  // Arranca en mañana, que es la respuesta más probable, y evita un toque. Si el
+  // pedido es urgente arranca hoy: el vecino necesita a alguien ya, y dejarlo en
+  // mañana haría que el default trabaje en contra. Borrando la fecha queda
+  // "a coordinar".
+  const [desde, setDesde] = useState<string>(() => (urgente ? hoyISO() : sumarDiasISO(1)))
   const [detalle, setDetalle] = useState('')
   const [estimado, setEstimado] = useState('')
 
@@ -137,7 +156,7 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
       setLoading(true)
       const { data, error } = await supabase
         .from('solicitud')
-        .select('id,contacto_nombre,barrio_id,mensaje,estado,monto_presupuestado,disponible_desde,detalle,created_at')
+        .select('id,contacto_nombre,barrio_id,mensaje,estado,monto_presupuestado,disponible_desde,detalle,created_at,pedido(es_urgencia)')
         .eq('prestador_id', prestadorId)
         .order('created_at', { ascending: false })
       if (error) {
@@ -145,7 +164,7 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
         setLoading(false)
         return
       }
-      const filas = (data as Solicitud[]) ?? []
+      const filas = ((data as unknown as SolicitudRow[]) ?? []).map(normalizar)
       setSolicitudes(filas)
 
       const ids = [...new Set(filas.map((s) => s.barrio_id).filter((x): x is string => !!x))]
@@ -185,7 +204,14 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
           {solicitudes.map((s) => (
             <div key={s.id} className="rounded-xl border border-gray-200 bg-white p-4">
               <div className="flex items-start justify-between gap-2">
-                <div className="font-medium text-gray-900">{s.contacto_nombre ?? 'Vecino'}</div>
+                <div className="font-medium text-gray-900">
+                  {s.contacto_nombre ?? 'Vecino'}
+                  {s.pedido?.es_urgencia && (
+                    <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-red-700">
+                      ⚡ Urgente
+                    </span>
+                  )}
+                </div>
                 <span
                   className={'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ' + (ESTADO_BADGE[s.estado] ?? '')}
                 >
@@ -198,7 +224,9 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
               {s.mensaje && <p className="mt-2 text-sm text-gray-600">“{s.mensaje}”</p>}
               <div className="mt-1 text-xs text-gray-400">{new Date(s.created_at).toLocaleDateString('es-AR')}</div>
 
-              {s.estado === 'pendiente' && <Responder solicitudId={s.id} onResponder={responder} />}
+              {s.estado === 'pendiente' && (
+                <Responder solicitudId={s.id} urgente={!!s.pedido?.es_urgencia} onResponder={responder} />
+              )}
 
               {s.estado === 'aceptada' && (
                 <p className="mt-2 text-sm text-gg-dark">
