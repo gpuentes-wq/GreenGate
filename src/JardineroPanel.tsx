@@ -23,6 +23,13 @@ const TIPO_LABEL_PERSONA: Record<string, string> = {
   identidad: 'Identidad de',
 }
 
+type SolicitudEstado = { estado: string; updated_at: string }
+
+// Cuánto tiempo una novedad sigue siendo novedad. Ni "te eligieron" ni "lo
+// dieron de baja" se pueden resolver haciendo algo, así que sin una ventana el
+// aviso quedaría prendido para siempre y el bloque dejaría de significar algo.
+const DIAS_NOVEDAD = 7
+
 // Panel/dashboard del jardinero: lo primero que ve al elegir su perfil.
 // Ordenado por urgencia, no como una lista plana de tarjetas iguales:
 // 1) Necesita tu atención (solicitudes + vencimientos) — lo único que
@@ -45,6 +52,8 @@ export function JardineroPanel({
   const [servicioPrincipal, setServicioPrincipal] = useState<ServicioPrincipal | null>(null)
   const [especialidades, setEspecialidades] = useState<string[]>([])
   const [pendientes, setPendientes] = useState(0)
+  const [canceladas, setCanceladas] = useState(0)
+  const [elegidas, setElegidas] = useState(0)
   const [clientesActivos, setClientesActivos] = useState(0)
   const [presupuestosRealizados, setPresupuestosRealizados] = useState(0)
   const [puntajePromedio, setPuntajePromedio] = useState<number | null>(null)
@@ -66,7 +75,7 @@ export function JardineroPanel({
         supabase.from('prestador_servicio').select('tipo').eq('prestador_id', prestadorId),
         supabase.from('prestador').select('tipo_servicio_principal,tarifa_referencia,disponible_urgencia').eq('id', prestadorId).single(),
         supabase.from('prestador_directorio').select('puntaje_promedio,cantidad_valoraciones').eq('id', prestadorId).single(),
-        supabase.from('solicitud').select('estado').eq('prestador_id', prestadorId),
+        supabase.from('solicitud').select('estado,updated_at').eq('prestador_id', prestadorId),
         supabase.from('trabajo').select('fecha,propietario_id').eq('prestador_id', prestadorId),
         supabase.from('integrante').select('id,nombre,apellido').eq('prestador_id', prestadorId).eq('activo', true),
         supabase.from('verificacion').select('tipo,estado,fecha_vencimiento,integrante_id').eq('prestador_id', prestadorId),
@@ -107,8 +116,19 @@ export function JardineroPanel({
       setOfreceJardineriaGeneral(principal?.tipo_servicio_principal === 'jardineria' || adicionales.includes('jardineria'))
 
       // Solicitudes pendientes (necesitan respuesta).
-      const solicitudes = (solRes.data as Array<{ estado: string }>) ?? []
+      const solicitudes = (solRes.data as SolicitudEstado[]) ?? []
       setPendientes(solicitudes.filter((s) => s.estado === 'pendiente').length)
+
+      // Novedades: lo que pasó sin que el jardinero estuviera mirando. No
+      // exigen una acción como las pendientes, pero hoy solo se entera de estas
+      // dos cosas si entra a Solicitudes y encuentra la tarjeta.
+      //
+      // La fecha sale de solicitud.updated_at, que estampa un trigger en cada
+      // cambio de estado (ver migracion-solicitud-updated-at.sql).
+      const desde = Date.now() - DIAS_NOVEDAD * 86_400_000
+      const reciente = (s: SolicitudEstado) => new Date(s.updated_at).getTime() >= desde
+      setCanceladas(solicitudes.filter((s) => s.estado === 'cancelada' && reciente(s)).length)
+      setElegidas(solicitudes.filter((s) => s.estado === 'elegida' && reciente(s)).length)
       // Pedidos respondidos: solicitudes que ya contestó, con "puedo ir" o con un no.
       // Proxy más cercano disponible hoy — no hay todavía monto de cotización.
       setPresupuestosRealizados(solicitudes.filter((s) => s.estado !== 'pendiente').length)
@@ -164,7 +184,7 @@ export function JardineroPanel({
   if (loading) return <p className="text-gray-500">Cargando…</p>
   if (error) return <p className="text-sm text-red-600">No se pudo cargar tu panel: {error}</p>
 
-  const todoAlDia = pendientes === 0 && alertas.length === 0
+  const todoAlDia = pendientes === 0 && alertas.length === 0 && canceladas === 0 && elegidas === 0
 
   return (
     <div className="space-y-6">
@@ -176,7 +196,7 @@ export function JardineroPanel({
               ? `${pendientes} solicitud${pendientes === 1 ? '' : 'es'} esperando respuesta`
               : 'No tenés solicitudes pendientes'}
           </span>
-          {pendientes > 0 && (
+          {(pendientes > 0 || canceladas > 0 || elegidas > 0) && (
             <button
               onClick={onVerSolicitudes}
               className="shrink-0 rounded-lg border border-amber-400 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
@@ -185,6 +205,22 @@ export function JardineroPanel({
             </button>
           )}
         </div>
+
+        {elegidas > 0 && (
+          <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm font-medium text-green-800">
+            🎉 {elegidas === 1 ? 'Un vecino te eligió' : `${elegidas} vecinos te eligieron`} para su jardín. Van a
+            escribirte por WhatsApp para coordinar la visita.
+          </p>
+        )}
+
+        {canceladas > 0 && (
+          <p className="mt-2 text-sm text-gray-800">
+            {canceladas === 1
+              ? 'Un vecino dio de baja un pedido que habías respondido'
+              : `${canceladas} vecinos dieron de baja pedidos que habías respondido`}
+            . Si te habías reservado la fecha, ya podés liberarla.
+          </p>
+        )}
         {alertas.length > 0 && (
           <ul className="mt-2 space-y-1">
             {alertas.map((a, i) => (
