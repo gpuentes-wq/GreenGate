@@ -9,6 +9,7 @@ type Pedido = {
   barrio_id: string | null
   descripcion: string | null
   es_urgencia: boolean
+  cancelado_en: string | null
   created_at: string
 }
 type Cotizacion = {
@@ -34,7 +35,13 @@ const ESTADO_LABEL: Record<string, string> = {
   pendiente: 'Esperando respuesta',
   rechazada: 'No puede tomarlo',
   no_seleccionada: 'No lo elegiste',
+  cancelada: 'Cancelaste el pedido',
 }
+
+// Solicitudes que siguen vivas: son las que hay que cerrar al cancelar. Las
+// rechazadas y no seleccionadas ya terminaron y se dejan como están —
+// pisarlas borraría lo que efectivamente pasó.
+const VIVAS = ['pendiente', 'aceptada', 'elegida']
 
 // Estados en los que el prestador quedó dentro del pedido y su teléfono tiene
 // sentido: respondió que puede ir, o ya fue elegido.
@@ -85,6 +92,10 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
   const [celulares, setCelulares] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Qué pedido está pidiendo confirmación de baja. Se confirma en la misma
+  // pantalla y no con un confirm() del navegador, que en el celular aparece
+  // como un cartel del sistema y se descarta sin leer.
+  const [confirmando, setConfirmando] = useState<string | null>(null)
 
   useEffect(() => {
     async function cargar() {
@@ -96,7 +107,7 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
       const [pRes, sRes] = await Promise.all([
         supabase
           .from('pedido')
-          .select('id,barrio_id,descripcion,es_urgencia,created_at')
+          .select('id,barrio_id,descripcion,es_urgencia,cancelado_en,created_at')
           .in('id', ids)
           .order('created_at', { ascending: false }),
         supabase
@@ -187,6 +198,28 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
     }
   }
 
+  // Dar de baja el pedido entero: es un solo acto para el propietario ("ya no
+  // lo necesito") y las solicitudes son la consecuencia. Sin esto, el jardinero
+  // que se tomó el trabajo de contestar queda esperando para siempre.
+  async function cancelar(pedidoId: string) {
+    const vivas = cotizaciones.filter((c) => c.pedido_id === pedidoId && VIVAS.includes(c.estado)).map((c) => c.id)
+    const ahora = new Date().toISOString()
+
+    setConfirmando(null)
+    setPedidos((ps) => ps.map((p) => (p.id === pedidoId ? { ...p, cancelado_en: ahora } : p)))
+    setCotizaciones((cs) => cs.map((c) => (vivas.includes(c.id) ? { ...c, estado: 'cancelada' } : c)))
+
+    const { error: e1 } = await supabase.from('pedido').update({ cancelado_en: ahora }).eq('id', pedidoId)
+    if (e1) {
+      setError(e1.message)
+      return
+    }
+    if (vivas.length > 0) {
+      const { error: e2 } = await supabase.from('solicitud').update({ estado: 'cancelada' }).in('id', vivas)
+      if (e2) setError(e2.message)
+    }
+  }
+
   if (loading) return <p className="text-gray-500">Cargando…</p>
 
   return (
@@ -222,6 +255,8 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
                 return ordenDisponibilidad(a.disponible_desde) - ordenDisponibilidad(b.disponible_desde)
               })
             const yaElegido = suyas.some((c) => c.estado === 'elegida')
+            const cancelado = !!pedido.cancelado_en
+            const elegido = suyas.find((c) => c.estado === 'elegida')
             return (
               <section key={pedido.id} className="rounded-xl border border-gray-200 bg-white p-5">
                 <div className="flex items-center gap-2 text-xs text-gray-400">
@@ -229,6 +264,11 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
                   {pedido.es_urgencia && (
                     <span className="rounded-full bg-red-100 px-2 py-0.5 font-semibold uppercase tracking-wide text-red-700">
                       ⚡ Urgente
+                    </span>
+                  )}
+                  {cancelado && (
+                    <span className="rounded-full bg-gray-200 px-2 py-0.5 font-semibold uppercase tracking-wide text-gray-600">
+                      Cancelado
                     </span>
                   )}
                 </div>
@@ -271,7 +311,7 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
                           </p>
                         )}
 
-                        {c.estado === 'aceptada' && !yaElegido && (
+                        {c.estado === 'aceptada' && !yaElegido && !cancelado && (
                           <button
                             type="button"
                             onClick={() => elegir(pedido.id, c.id)}
@@ -315,11 +355,60 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
                   })}
                 </div>
 
-                {!yaElegido && suyas.filter((c) => c.estado === 'aceptada').length > 1 && (
+                {!cancelado && !yaElegido && suyas.filter((c) => c.estado === 'aceptada').length > 1 && (
                   <p className="mt-3 text-xs text-gray-500">
                     Compará quién puede ir antes y con qué puntaje. El precio de referencia de cada uno está en su
                     perfil; el precio final lo van a acordar cuando vea el jardín.
                   </p>
+                )}
+
+                {cancelado && (
+                  <p className="mt-3 text-xs text-gray-500">
+                    Diste de baja este pedido. Los jardineros lo ven en su panel y ya no te están esperando.
+                  </p>
+                )}
+
+                {/* Dar de baja es lo que le falta al circuito cuando el vecino no
+                    avanza: sin esto, el que contestó espera indefinidamente. */}
+                {!cancelado && confirmando !== pedido.id && (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmando(pedido.id)}
+                    className="mt-3 text-xs text-gray-400 underline hover:text-gray-600"
+                  >
+                    Ya no lo necesito
+                  </button>
+                )}
+
+                {!cancelado && confirmando === pedido.id && (
+                  <div className="mt-3 rounded-lg bg-gray-50 p-3">
+                    <p className="text-sm text-gray-700">
+                      {elegido ? (
+                        <>
+                          Ya elegiste a <strong>{prestadores[elegido.prestador_id] ? nombreDe(prestadores[elegido.prestador_id]) : 'un jardinero'}</strong>. Le avisamos en su panel, pero si ya
+                          habían coordinado, escribile también por WhatsApp.
+                        </>
+                      ) : (
+                        <>Les avisamos a los jardineros que ya no lo necesitás, así dejan de esperarte.</>
+                      )}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => cancelar(pedido.id)}
+                        className="rounded-lg bg-gray-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
+                      >
+                        Sí, dar de baja
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmando(null)}
+                        className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-white"
+                      >
+                        Volver
+                      </button>
+                    </div>
+                  </div>
                 )}
               </section>
             )

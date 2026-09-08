@@ -47,6 +47,7 @@ const ESTADO_BADGE: Record<string, string> = {
   elegida: 'bg-green-100 text-green-800',
   no_seleccionada: 'bg-gray-100 text-gray-500',
   rechazada: 'bg-gray-100 text-gray-500',
+  cancelada: 'bg-gray-100 text-gray-500',
 }
 
 // El estado se guarda como enum ('no_seleccionada'), que no se puede mostrar
@@ -57,6 +58,7 @@ const ESTADO_LABEL: Record<string, string> = {
   elegida: 'Te eligieron',
   no_seleccionada: 'Eligieron a otro',
   rechazada: 'No la tomaste',
+  cancelada: 'Dado de baja',
 }
 
 // El jardinero responde si PUEDE IR, no con un precio cerrado: no vio el jardín
@@ -250,6 +252,12 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
               {s.estado === 'no_seleccionada' && (
                 <p className="mt-2 text-sm text-gray-500">
                   El vecino eligió a otro jardinero para este pedido. No hace falta que esperes.
+                </p>
+              )}
+
+              {s.estado === 'cancelada' && (
+                <p className="mt-2 text-sm text-gray-500">
+                  El vecino dio de baja el pedido. Si te habías reservado la fecha, ya podés liberarla.
                 </p>
               )}
             </div>
