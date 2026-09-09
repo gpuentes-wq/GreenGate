@@ -34,6 +34,15 @@ function normalizar(fila: SolicitudRow): Solicitud {
   return { ...resto, pedido: Array.isArray(pedido) ? pedido[0] ?? null : pedido }
 }
 
+// La reseña que dejó el vecino sobre ese trabajo, con la respuesta del
+// jardinero si ya la escribió.
+type Resena = {
+  id: string
+  puntaje: number
+  comentario: string | null
+  respuesta_prestador: string | null
+}
+
 type Respuesta = {
   estado: string
   disponible_desde?: string | null
@@ -181,10 +190,14 @@ function Responder({
 export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
   const [barrios, setBarrios] = useState<Record<string, string>>({})
-  // Solicitudes que ya tienen reseña: dejan de mostrar el botón de pedirla, así
-  // el jardinero no insiste con un vecino que ya la dejó.
-  const [conResena, setConResena] = useState<Set<string>>(new Set())
+  // Reseñas por solicitud. Antes solo se guardaba si existía, para esconder el
+  // botón de pedirla; ahora se trae el contenido, porque el jardinero necesita
+  // leerla para poder responderla.
+  const [resenas, setResenas] = useState<Record<string, Resena>>({})
   const [copiado, setCopiado] = useState<string | null>(null)
+  const [respondiendo, setRespondiendo] = useState<string | null>(null)
+  const [borrador, setBorrador] = useState('')
+  const [guardando, setGuardando] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -206,10 +219,15 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
 
       const elegidas = filas.filter((s) => s.estado === 'elegida').map((s) => s.id)
       if (elegidas.length > 0) {
-        const { data: vData } = await supabase.from('valoracion').select('solicitud_id').in('solicitud_id', elegidas)
-        setConResena(
-          new Set(((vData as Array<{ solicitud_id: string | null }>) ?? []).map((v) => v.solicitud_id ?? '')),
-        )
+        const { data: vData } = await supabase
+          .from('valoracion')
+          .select('id,solicitud_id,puntaje,comentario,respuesta_prestador')
+          .in('solicitud_id', elegidas)
+        const mapa: Record<string, Resena> = {}
+        for (const v of (vData as Array<Resena & { solicitud_id: string | null }>) ?? []) {
+          if (v.solicitud_id) mapa[v.solicitud_id] = v
+        }
+        setResenas(mapa)
       }
 
       const ids = [...new Set(filas.map((s) => s.barrio_id).filter((x): x is string => !!x))]
@@ -267,6 +285,27 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
       // Sin permiso de portapapeles (o en http), al menos que vea el link.
       setError(`Copialo a mano: ${texto}`)
     }
+  }
+
+  // La respuesta es pública: aparece bajo la reseña en el perfil que ve
+  // cualquier vecino. Por eso se guarda una vez y se muestra tal cual, sin
+  // edición: reescribir una respuesta ya leída cambiaría el registro.
+  async function responderResena(solicitudId: string, resenaId: string) {
+    const texto = borrador.trim()
+    if (!texto) return
+    setGuardando(true)
+    const { error: e } = await supabase
+      .from('valoracion')
+      .update({ respuesta_prestador: texto })
+      .eq('id', resenaId)
+    setGuardando(false)
+    if (e) {
+      setError(e.message)
+      return
+    }
+    setResenas((r) => ({ ...r, [solicitudId]: { ...r[solicitudId], respuesta_prestador: texto } }))
+    setRespondiendo(null)
+    setBorrador('')
   }
 
   const pendientes = solicitudes.filter((s) => s.estado === 'pendiente').length
@@ -345,8 +384,73 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
                     para coordinar la visita.
                   </p>
 
-                  {conResena.has(s.id) ? (
-                    <p className="mt-2 text-sm text-gray-500">⭐ Ya te dejó una reseña. Está en tu perfil.</p>
+                  {resenas[s.id] ? (
+                    <div className="mt-2 rounded-lg border border-gray-200 p-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-amber-500">{'★'.repeat(resenas[s.id].puntaje)}</span>
+                        <span className="text-gray-400">{'★'.repeat(5 - resenas[s.id].puntaje)}</span>
+                      </div>
+                      {resenas[s.id].comentario && (
+                        <p className="mt-1 text-sm text-gray-700">“{resenas[s.id].comentario}”</p>
+                      )}
+
+                      {/* La réplica existe para equilibrar: el vecino cuenta su
+                          versión en público y el jardinero puede dar la suya.
+                          Un "el cliente sumó la poda el mismo día y no llegué"
+                          cambia por completo cómo se lee un 3 estrellas. */}
+                      {resenas[s.id].respuesta_prestador ? (
+                        <p className="mt-2 rounded-md bg-gray-50 p-2 text-sm text-gray-600">
+                          <span className="font-medium">Tu respuesta: </span>
+                          {resenas[s.id].respuesta_prestador}
+                        </p>
+                      ) : respondiendo === s.id ? (
+                        <div className="mt-2">
+                          <textarea
+                            rows={2}
+                            maxLength={500}
+                            autoFocus
+                            value={borrador}
+                            onChange={(e) => setBorrador(e.target.value)}
+                            placeholder="Contá tu versión, con respeto. Lo van a leer tus próximos clientes."
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gg-green focus:outline-none"
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            Se publica debajo de la reseña, en tu perfil. No se puede editar después.
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              disabled={!borrador.trim() || guardando}
+                              onClick={() => responderResena(s.id, resenas[s.id].id)}
+                              className="rounded-lg bg-gg-green px-3 py-1.5 text-sm font-medium text-white hover:bg-gg-dark disabled:opacity-50"
+                            >
+                              {guardando ? 'Publicando…' : 'Publicar respuesta'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRespondiendo(null)
+                                setBorrador('')
+                              }}
+                              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRespondiendo(s.id)
+                            setBorrador('')
+                          }}
+                          className="mt-2 text-sm font-medium text-gg-green hover:underline"
+                        >
+                          Responder esta reseña
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <div className="mt-2">
                       <button
