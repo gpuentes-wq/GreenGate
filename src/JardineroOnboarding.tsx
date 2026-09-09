@@ -276,7 +276,6 @@ export default function JardineroOnboarding({ prestadorInicial = null }: { prest
       {editId && seccion === 'panel' ? (
         <JardineroPanel
           prestadorId={editId}
-          onVerSolicitudes={() => setSeccion('solicitudes')}
           onEditarPerfil={() => setSeccion('perfil')}
           onVerEquipo={() => setSeccion('equipo')}
         />

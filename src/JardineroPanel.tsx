@@ -37,14 +37,14 @@ const DIAS_NOVEDAD = 7
 // 2) Tu negocio (puntaje, clientes activos, pedidos respondidos, servicios) — salud general.
 // 3) Tu perfil público (equipo, barrios, servicios y precios) — cambia
 //    poco, es más referencia que algo para chequear cada vez.
+// Sin acceso propio a las solicitudes: la pestaña "Solicitudes" está siempre a
+// la vista, y un segundo camino al mismo lugar solo agrega ruido al bloque.
 export function JardineroPanel({
   prestadorId,
-  onVerSolicitudes,
   onEditarPerfil,
   onVerEquipo,
 }: {
   prestadorId: string
-  onVerSolicitudes: () => void
   onEditarPerfil: () => void
   onVerEquipo: () => void
 }) {
@@ -226,15 +226,6 @@ export function JardineroPanel({
             . Si te habías reservado la fecha, ya podés liberarla.
           </p>
         )}
-        {(pendientes > 0 || canceladas > 0 || elegidas > 0) && (
-          <button
-            onClick={onVerSolicitudes}
-            className="mt-3 rounded-lg border border-amber-400 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100"
-          >
-            Ver mis solicitudes →
-          </button>
-        )}
-
         {alertas.length > 0 && (
           <ul className="mt-2 space-y-1">
             {alertas.map((a, i) => (
