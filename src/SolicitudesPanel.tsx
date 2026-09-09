@@ -181,6 +181,10 @@ function Responder({
 export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
   const [barrios, setBarrios] = useState<Record<string, string>>({})
+  // Solicitudes que ya tienen reseña: dejan de mostrar el botón de pedirla, así
+  // el jardinero no insiste con un vecino que ya la dejó.
+  const [conResena, setConResena] = useState<Set<string>>(new Set())
+  const [copiado, setCopiado] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -199,6 +203,14 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
       }
       const filas = ((data as unknown as SolicitudRow[]) ?? []).map(normalizar)
       setSolicitudes(filas)
+
+      const elegidas = filas.filter((s) => s.estado === 'elegida').map((s) => s.id)
+      if (elegidas.length > 0) {
+        const { data: vData } = await supabase.from('valoracion').select('solicitud_id').in('solicitud_id', elegidas)
+        setConResena(
+          new Set(((vData as Array<{ solicitud_id: string | null }>) ?? []).map((v) => v.solicitud_id ?? '')),
+        )
+      }
 
       const ids = [...new Set(filas.map((s) => s.barrio_id).filter((x): x is string => !!x))]
       if (ids.length > 0) {
@@ -238,6 +250,24 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
   }, [solicitudes])
+
+  // El jardinero no tiene el teléfono del vecino (nunca viaja hasta acá), pero
+  // el vecino ya le escribió: la conversación existe en su celular. Así que la
+  // app no manda nada — le arma el texto para que lo pegue en ese chat.
+  async function copiarPedidoDeResena(solicitudId: string, nombre: string | null) {
+    const link = `${window.location.origin}/?resena=${solicitudId}`
+    const texto =
+      `Hola${nombre ? ' ' + nombre : ''}! Si quedaste conforme con el trabajo, ¿me dejás una reseña en GreenGate? ` +
+      `Es un minuto y me ayuda muchísimo: ${link}`
+    try {
+      await navigator.clipboard.writeText(texto)
+      setCopiado(solicitudId)
+      setTimeout(() => setCopiado(null), 4000)
+    } catch {
+      // Sin permiso de portapapeles (o en http), al menos que vea el link.
+      setError(`Copialo a mano: ${texto}`)
+    }
+  }
 
   const pendientes = solicitudes.filter((s) => s.estado === 'pendiente').length
 
@@ -309,10 +339,29 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
               )}
 
               {s.estado === 'elegida' && (
-                <p className="mt-2 rounded-lg border border-green-200 bg-green-100 px-3 py-2 text-sm font-medium text-green-900">
-                  🎉 Te eligieron para este trabajo. {s.contacto_nombre ?? 'El vecino'} te va a escribir por WhatsApp
-                  para coordinar la visita.
-                </p>
+                <>
+                  <p className="mt-2 rounded-lg border border-green-200 bg-green-100 px-3 py-2 text-sm font-medium text-green-900">
+                    🎉 Te eligieron para este trabajo. {s.contacto_nombre ?? 'El vecino'} te va a escribir por WhatsApp
+                    para coordinar la visita.
+                  </p>
+
+                  {conResena.has(s.id) ? (
+                    <p className="mt-2 text-sm text-gray-500">⭐ Ya te dejó una reseña. Está en tu perfil.</p>
+                  ) : (
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        onClick={() => copiarPedidoDeResena(s.id, s.contacto_nombre)}
+                        className="w-full rounded-lg border border-gg-green px-3 py-1.5 text-sm font-medium text-gg-green transition hover:bg-gg-light sm:w-auto"
+                      >
+                        {copiado === s.id ? '✓ Copiado — pegalo en el chat' : 'Pedirle una reseña'}
+                      </button>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Copiamos el mensaje con el link. Pegalo en el WhatsApp que ya tenés con {s.contacto_nombre ?? 'el vecino'}.
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Mismo tratamiento que la baja: el resultado práctico es idéntico

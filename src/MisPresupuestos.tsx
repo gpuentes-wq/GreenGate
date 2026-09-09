@@ -3,6 +3,7 @@ import { supabase } from './lib/supabase'
 import { EmptyState } from './ui'
 import { misPedidos } from './misPedidos'
 import { cuandoLabel, esHoy, ordenDisponibilidad } from './labels'
+import { DejarResena } from './DejarResena'
 
 type Pedido = {
   id: string
@@ -115,6 +116,12 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
   // pantalla y no con un confirm() del navegador, que en el celular aparece
   // como un cartel del sistema y se descarta sin leer.
   const [confirmando, setConfirmando] = useState<string | null>(null)
+  // Solicitudes elegidas que ya tienen reseña. Es el contrapeso al pedido del
+  // jardinero: él le escribe al cliente contento, y acá se le pregunta a todos.
+  // Sin las dos vías, los puntajes se inflan solos y el directorio deja de
+  // distinguir — que es justamente lo que promete.
+  const [conResena, setConResena] = useState<Set<string>>(new Set())
+  const [resenando, setResenando] = useState<string | null>(null)
 
   useEffect(() => {
     async function cargar() {
@@ -167,6 +174,12 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
           if (p.celular) mapa[p.id] = p.celular
         }
         setCelulares(mapa)
+      }
+
+      const elegidas = cots.filter((c) => c.estado === 'elegida').map((c) => c.id)
+      if (elegidas.length > 0) {
+        const { data } = await supabase.from('valoracion').select('solicitud_id').in('solicitud_id', elegidas)
+        setConResena(new Set(((data as Array<{ solicitud_id: string | null }>) ?? []).map((v) => v.solicitud_id ?? '')))
       }
 
       const prestadorIds = [...new Set(cots.map((c) => c.prestador_id))]
@@ -416,6 +429,34 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
                               </p>
                             )}
                           </div>
+                        )}
+
+                        {/* La reseña se pide acá y no en una pantalla aparte: es
+                            donde el vecino vuelve, y donde ya está mirando a la
+                            persona que contrató. */}
+                        {c.estado === 'elegida' && !conResena.has(c.id) && (
+                          <div className="mt-3 border-t border-green-200 pt-3">
+                            {resenando === c.id ? (
+                              <DejarResena
+                                solicitudId={c.id}
+                                onListo={() => setConResena((s) => new Set(s).add(c.id))}
+                              />
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setResenando(c.id)}
+                                className="w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-900 transition hover:bg-amber-100 sm:w-auto"
+                              >
+                                ⭐ ¿Cómo te fue? Dejá tu reseña
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {c.estado === 'elegida' && conResena.has(c.id) && (
+                          <p className="mt-3 border-t border-green-200 pt-3 text-xs text-green-800">
+                            ⭐ Ya dejaste tu reseña. Gracias — les sirve a todos tus vecinos.
+                          </p>
                         )}
                       </div>
                     )
