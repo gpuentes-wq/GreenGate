@@ -188,27 +188,23 @@ export function JardineroPanel({
   if (loading) return <p className="text-gray-500">Cargando…</p>
   if (error) return <p className="text-sm text-red-600">No se pudo cargar tu panel: {error}</p>
 
-  const todoAlDia = pendientes === 0 && alertas.length === 0 && canceladas === 0 && elegidas === 0
+  // Que lo hayan elegido es una buena noticia, no un problema: no tiene por qué
+  // pintar el bloque de ámbar ni titularse "Necesita tu atención". El ámbar
+  // queda para lo que sí pide algo — contestar, renovar un papel, o liberar la
+  // fecha de un pedido que dieron de baja.
+  const requiereAtencion = pendientes > 0 || alertas.length > 0 || canceladas > 0
 
   return (
     <div className="space-y-6">
-      <section className={'rounded-xl p-4 ' + (todoAlDia ? 'bg-gg-light/50' : 'bg-amber-50')}>
-        <h3 className={'mb-2 text-xs font-semibold ' + (todoAlDia ? 'text-gg-dark' : 'text-amber-800')}>Necesita tu atención</h3>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-sm text-gray-800">
-            {pendientes > 0
-              ? `${pendientes} solicitud${pendientes === 1 ? '' : 'es'} esperando respuesta`
-              : 'No tenés solicitudes pendientes'}
-          </span>
-          {(pendientes > 0 || canceladas > 0 || elegidas > 0) && (
-            <button
-              onClick={onVerSolicitudes}
-              className="shrink-0 rounded-lg border border-amber-400 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
-            >
-              Ver
-            </button>
-          )}
-        </div>
+      <section className={'rounded-xl p-4 ' + (requiereAtencion ? 'bg-amber-50' : 'bg-gg-light/50')}>
+        <h3 className={'mb-2 text-xs font-semibold ' + (requiereAtencion ? 'text-amber-800' : 'text-gg-dark')}>
+          {requiereAtencion ? 'Necesita tu atención' : 'Todo al día'}
+        </h3>
+        <p className="text-sm text-gray-800">
+          {pendientes > 0
+            ? `${pendientes} solicitud${pendientes === 1 ? '' : 'es'} esperando respuesta`
+            : 'No tenés solicitudes pendientes'}
+        </p>
 
         {elegidas > 0 && (
           <p className="mt-2 rounded-lg border border-green-200 bg-green-100 px-3 py-2 text-sm font-medium text-green-900">
@@ -230,6 +226,15 @@ export function JardineroPanel({
             . Si te habías reservado la fecha, ya podés liberarla.
           </p>
         )}
+        {(pendientes > 0 || canceladas > 0 || elegidas > 0) && (
+          <button
+            onClick={onVerSolicitudes}
+            className="mt-3 rounded-lg border border-amber-400 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100"
+          >
+            Ver mis solicitudes →
+          </button>
+        )}
+
         {alertas.length > 0 && (
           <ul className="mt-2 space-y-1">
             {alertas.map((a, i) => (
@@ -239,7 +244,6 @@ export function JardineroPanel({
             ))}
           </ul>
         )}
-        {todoAlDia && <p className="mt-1 text-sm text-gray-500">Todo al día.</p>}
       </section>
 
       {ofreceJardineriaGeneral && (
