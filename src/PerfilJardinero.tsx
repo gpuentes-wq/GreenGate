@@ -156,8 +156,12 @@ export function PerfilJardinero({ prestadorId, onVolver }: { prestadorId: string
             ))}
           </div>
         )}
+        {/* La reseña no se deja acá: se deja desde "Mis pedidos", sobre el
+            jardinero que elegiste. Este perfil lo mira cualquiera, así que un
+            formulario suelto acá no tendría cómo saber si trataste con él. */}
         <p className="mt-4 text-xs text-gray-400">
-          Vas a poder dejar tu propia reseña acá una vez que confirmes un trabajo con este prestador — disponible cuando esté el login.
+          Las reseñas las dejan los vecinos que contrataron a este jardinero por GreenGate. Si lo elegiste para un
+          pedido, vas a encontrar el formulario en “Mis pedidos”.
         </p>
       </section>
     </main>

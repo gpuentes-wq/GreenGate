@@ -23,7 +23,7 @@ const TIPO_LABEL_PERSONA: Record<string, string> = {
   identidad: 'Identidad de',
 }
 
-type SolicitudEstado = { estado: string; updated_at: string }
+type SolicitudEstado = { estado: string; updated_at: string; contacto_nombre: string | null }
 
 // Cuánto tiempo una novedad sigue siendo novedad. Ni "te eligieron" ni "lo
 // dieron de baja" se pueden resolver haciendo algo, así que sin una ventana el
@@ -70,17 +70,16 @@ export function JardineroPanel({
       setLoading(true)
       setError(null)
 
-      const [pbRes, psRes, prRes, dirRes, solRes, trabRes, integRes, verifRes] = await Promise.all([
+      const [pbRes, psRes, prRes, dirRes, solRes, integRes, verifRes] = await Promise.all([
         supabase.from('prestador_barrio').select('barrio_id,habilitado').eq('prestador_id', prestadorId),
         supabase.from('prestador_servicio').select('tipo').eq('prestador_id', prestadorId),
         supabase.from('prestador').select('tipo_servicio_principal,tarifa_referencia,disponible_urgencia').eq('id', prestadorId).single(),
         supabase.from('prestador_directorio').select('puntaje_promedio,cantidad_valoraciones').eq('id', prestadorId).single(),
-        supabase.from('solicitud').select('estado,updated_at').eq('prestador_id', prestadorId),
-        supabase.from('trabajo').select('fecha,propietario_id').eq('prestador_id', prestadorId),
+        supabase.from('solicitud').select('estado,updated_at,contacto_nombre').eq('prestador_id', prestadorId),
         supabase.from('integrante').select('id,nombre,apellido').eq('prestador_id', prestadorId).eq('activo', true),
         supabase.from('verificacion').select('tipo,estado,fecha_vencimiento,integrante_id').eq('prestador_id', prestadorId),
       ])
-      const err = pbRes.error || psRes.error || prRes.error || solRes.error || trabRes.error || integRes.error || verifRes.error
+      const err = pbRes.error || psRes.error || prRes.error || solRes.error || integRes.error || verifRes.error
       if (err) {
         setError(err.message)
         setLoading(false)
@@ -133,14 +132,19 @@ export function JardineroPanel({
       // Proxy más cercano disponible hoy — no hay todavía monto de cotización.
       setPresupuestosRealizados(solicitudes.filter((s) => s.estado !== 'pendiente').length)
 
-      // Clientes activos: propietarios distintos con un trabajo en los últimos 60 días.
-      const trabajos = (trabRes.data as Array<{ fecha: string; propietario_id: string | null }>) ?? []
-      const hoy = new Date()
-      const haceSesentaDias = new Date(hoy.getTime() - 60 * 86_400_000)
-      const clientes = new Set(
-        trabajos.filter((t) => t.propietario_id && new Date(t.fecha + 'T00:00:00') >= haceSesentaDias).map((t) => t.propietario_id as string),
+      // Clientes activos: vecinos distintos que lo eligieron en los últimos 60
+      // días. Antes se contaban trabajos, pero nada escribe nunca en esa tabla
+      // y el número daba siempre cero. Una elección es lo más cerca que la app
+      // está hoy de saber que hubo trabajo.
+      const haceSesentaDias = Date.now() - 60 * 86_400_000
+      setClientesActivos(
+        new Set(
+          solicitudes
+            .filter((s) => s.estado === 'elegida' && new Date(s.updated_at).getTime() >= haceSesentaDias)
+            .map((s) => (s.contacto_nombre ?? '').trim().toLowerCase())
+            .filter((n) => n.length > 0),
+        ).size,
       )
-      setClientesActivos(clientes.size)
 
       // Alertas de documentación (propias, y de cada integrante si es un equipo).
       const nombrePorIntegrante = new Map(integrantes.map((i) => [i.id, `${i.nombre}${i.apellido ? ' ' + i.apellido : ''}`]))
