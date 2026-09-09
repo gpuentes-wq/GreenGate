@@ -213,8 +213,13 @@ export function JardineroPanel({
           </p>
         )}
 
+        {/* Ámbar y no rojo: la baja no es un error del jardinero ni una
+            emergencia. El rojo se reserva para la documentación vencida, que sí
+            lo deja afuera del barrio. Y el fondo va un tono más fuerte que el de
+            la sección, que ya es amber-50, para que se despegue. */}
         {canceladas > 0 && (
-          <p className="mt-2 text-sm text-gray-800">
+          <p className="mt-2 rounded-lg border border-amber-200 bg-amber-100 px-3 py-2 text-sm font-medium text-amber-900">
+            🗓️{' '}
             {canceladas === 1
               ? 'Un vecino dio de baja un pedido que habías respondido'
               : `${canceladas} vecinos dieron de baja pedidos que habías respondido`}
