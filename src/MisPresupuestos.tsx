@@ -31,11 +31,30 @@ type PrestadorLite = {
   cantidad_valoraciones: number
 }
 
+// Los mismos estados que ve el jardinero, contados desde este lado del pedido.
 const ESTADO_LABEL: Record<string, string> = {
   pendiente: 'Esperando respuesta',
+  aceptada: 'Puede ir',
+  elegida: 'Lo elegiste',
   rechazada: 'No puede tomarlo',
   no_seleccionada: 'No lo elegiste',
-  cancelada: 'Cancelaste el pedido',
+  cancelada: 'Diste de baja el pedido',
+}
+
+// Mismo idioma visual que el panel del jardinero:
+//   claro con borde → algo pasó y te involucra
+//   gris            → cerrado, no hay nada que hacer
+//
+// 'aceptada' va en ámbar porque es la que te devuelve la pelota: contestó y
+// ahora te toca decidir. El llamado a la acción fuerte vive una sola vez, en la
+// cabecera del pedido — repetirlo en cada tarjeta sería gritar tres veces.
+const ESTADO_BADGE: Record<string, string> = {
+  pendiente: 'bg-gray-100 text-gray-500',
+  aceptada: 'border border-amber-300 bg-amber-50 text-amber-800',
+  elegida: 'border border-green-300 bg-green-50 text-green-800',
+  rechazada: 'bg-gray-100 text-gray-500',
+  no_seleccionada: 'bg-gray-100 text-gray-500',
+  cancelada: 'bg-gray-100 text-gray-500',
 }
 
 // Solicitudes que siguen vivas: son las que hay que cerrar al cancelar. Las
@@ -257,8 +276,17 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
             const yaElegido = suyas.some((c) => c.estado === 'elegida')
             const cancelado = !!pedido.cancelado_en
             const elegido = suyas.find((c) => c.estado === 'elegida')
+            // Respuestas esperando una decisión: es lo único que en esta pantalla
+            // depende del propietario, y lo que define si el pedido se destaca.
+            const paraElegir = !cancelado && !yaElegido ? suyas.filter((c) => c.estado === 'aceptada').length : 0
             return (
-              <section key={pedido.id} className="rounded-xl border border-gray-200 bg-white p-5">
+              <section
+                key={pedido.id}
+                className={
+                  'rounded-xl border bg-white p-5 ' +
+                  (paraElegir > 0 ? 'border-amber-300 ring-1 ring-amber-200' : 'border-gray-200')
+                }
+              >
                 <div className="flex items-center gap-2 text-xs text-gray-400">
                   <span>Pedido del {new Date(pedido.created_at).toLocaleDateString('es-AR')}</span>
                   {pedido.es_urgencia && (
@@ -274,48 +302,70 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
                 </div>
                 {pedido.descripcion && <p className="mt-1 text-sm text-gray-700">“{pedido.descripcion}”</p>}
 
-                <div className="mt-4 space-y-2">
+                {/* Un pedido es una comparación, así que cada jardinero va en su
+                    propia tarjeta enmarcada: el nombre, su respuesta y el botón
+                    de elegir tienen que leerse como un bloque y no como renglones
+                    sueltos de una lista. */}
+                <div className="mt-4 space-y-3">
                   {suyas.map((c) => {
                     const p = prestadores[c.prestador_id]
                     const puedeIr = c.estado === 'aceptada' || c.estado === 'elegida'
+                    const decidible = c.estado === 'aceptada' && !yaElegido && !cancelado
                     return (
-                      <div key={c.id} className="rounded-lg border border-gray-100 px-3 py-2 text-sm">
-                        <div className="flex flex-wrap items-baseline justify-between gap-2">
-                          <span className="font-medium text-gray-800">
-                            {p ? nombreDe(p) : 'Prestador'}
-                            {p?.puntaje_promedio != null && (
-                              <span className="ml-2 text-xs font-normal text-gray-400">
-                                ★ {p.puntaje_promedio} ({p.cantidad_valoraciones})
-                              </span>
-                            )}
-                          </span>
-                          <span className="text-gray-600">
-                            {puedeIr ? (
-                              <>
-                                Puede ir{' '}
-                                {/* En un pedido urgente lo único que se compara de
-                                    un vistazo es quién puede hoy. Fuera de una
-                                    urgencia, pintar las fechas sería ruido. */}
-                                {pedido.es_urgencia ? (
-                                  <strong
-                                    className={
-                                      'rounded-full px-2 py-0.5 ' +
-                                      (esHoy(c.disponible_desde)
-                                        ? 'bg-green-100 text-green-800'
-                                        : 'bg-amber-100 text-amber-800')
-                                    }
-                                  >
-                                    {cuandoLabel(c.disponible_desde)}
-                                  </strong>
-                                ) : (
-                                  <strong>{cuandoLabel(c.disponible_desde)}</strong>
-                                )}
-                              </>
+                      <div
+                        key={c.id}
+                        className={
+                          'rounded-xl border p-3 text-sm ' +
+                          (c.estado === 'elegida'
+                            ? 'border-green-300 bg-green-50'
+                            : decidible
+                              ? 'border-gray-300 bg-white'
+                              : 'border-gray-200 bg-gray-50')
+                        }
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="font-medium text-gray-900">{p ? nombreDe(p) : 'Prestador'}</div>
+                            {p?.puntaje_promedio != null ? (
+                              <div className="text-xs text-gray-500">
+                                ★ {p.puntaje_promedio} · {p.cantidad_valoraciones} reseñas
+                              </div>
                             ) : (
-                              <span className="text-gray-400">{ESTADO_LABEL[c.estado] ?? c.estado}</span>
+                              <div className="text-xs text-gray-400">Sin reseñas todavía</div>
                             )}
+                          </div>
+                          <span
+                            className={
+                              'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ' +
+                              (ESTADO_BADGE[c.estado] ?? '')
+                            }
+                          >
+                            {ESTADO_LABEL[c.estado] ?? c.estado}
                           </span>
                         </div>
+
+                        {puedeIr && (
+                          <p className="mt-2 text-gray-700">
+                            Puede ir{' '}
+                            {/* En un pedido urgente lo único que se compara de un
+                                vistazo es quién puede hoy. Fuera de una urgencia,
+                                pintar las fechas sería ruido. */}
+                            {pedido.es_urgencia ? (
+                              <strong
+                                className={
+                                  'rounded-full px-2 py-0.5 ' +
+                                  (esHoy(c.disponible_desde)
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-amber-100 text-amber-800')
+                                }
+                              >
+                                {cuandoLabel(c.disponible_desde)}
+                              </strong>
+                            ) : (
+                              <strong>{cuandoLabel(c.disponible_desde)}</strong>
+                            )}
+                          </p>
+                        )}
 
                         {puedeIr && c.detalle && <p className="mt-1 text-xs text-gray-600">“{c.detalle}”</p>}
 
@@ -328,11 +378,11 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
                           </p>
                         )}
 
-                        {c.estado === 'aceptada' && !yaElegido && !cancelado && (
+                        {decidible && (
                           <button
                             type="button"
                             onClick={() => elegir(pedido.id, c.id)}
-                            className="mt-2 w-full rounded-lg border border-gg-green px-3 py-1.5 text-sm font-medium text-gg-green transition hover:bg-gg-light sm:w-auto"
+                            className="mt-3 w-full rounded-lg border border-gg-green px-3 py-1.5 text-sm font-medium text-gg-green transition hover:bg-gg-light sm:w-auto"
                           >
                             Elegir a este jardinero
                           </button>
@@ -341,8 +391,8 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
                         {/* El contacto se abre recién cuando lo elegiste: antes de
                             eso no hay a quién escribirle todavía. */}
                         {c.estado === 'elegida' && (
-                          <div className="mt-2">
-                            <p className="mb-2 text-xs font-medium text-green-700">
+                          <div className="mt-3 border-t border-green-200 pt-3">
+                            <p className="mb-2 text-xs font-medium text-green-800">
                               ✓ Lo elegiste. Le avisamos en su panel.
                             </p>
                             {celulares[c.prestador_id] ? (
@@ -372,10 +422,21 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
                   })}
                 </div>
 
-                {!cancelado && !yaElegido && suyas.filter((c) => c.estado === 'aceptada').length > 1 && (
-                  <p className="mt-3 text-xs text-gray-500">
-                    Compará quién puede ir antes y con qué puntaje. El precio de referencia de cada uno está en su
-                    perfil; el precio final lo van a acordar cuando vea el jardín.
+                {/* El llamado a la acción, una sola vez y al pie: repetirlo en
+                    cada tarjeta sería gritar tres veces lo mismo. */}
+                {paraElegir > 0 && (
+                  <p className="mt-3 rounded-lg border border-amber-200 bg-amber-100 px-3 py-2 text-sm font-medium text-amber-900">
+                    👉 {paraElegir === 1 ? 'Un jardinero puede ir' : `${paraElegir} jardineros pueden ir`}. Elegí a uno
+                    para coordinar la visita.
+                  </p>
+                )}
+
+                {/* La ayuda para comparar solo tiene sentido si hay más de una
+                    opción; con una sola, el aviso de arriba ya dice todo. */}
+                {paraElegir > 1 && (
+                  <p className="mt-2 text-xs text-gray-500">
+                    Mirá quién puede ir antes y con qué puntaje. El precio de referencia de cada uno está en su perfil;
+                    el precio final lo acuerdan cuando vea el jardín.
                   </p>
                 )}
 
