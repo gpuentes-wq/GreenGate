@@ -280,9 +280,11 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
                 </p>
               )}
 
+              {/* Mismo tratamiento que en el panel: ámbar enmarcado y calendario,
+                  para que la baja se lea igual en las dos pantallas. */}
               {s.estado === 'cancelada' && (
-                <p className="mt-2 text-sm text-gray-500">
-                  El vecino dio de baja el pedido. Si te habías reservado la fecha, ya podés liberarla.
+                <p className="mt-2 rounded-lg border border-amber-200 bg-amber-100 px-3 py-2 text-sm font-medium text-amber-900">
+                  🗓️ El vecino dio de baja el pedido. Si te habías reservado la fecha, ya podés liberarla.
                 </p>
               )}
             </div>
