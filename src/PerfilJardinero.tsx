@@ -5,6 +5,14 @@ import { servicioLabel } from './labels'
 import { Insignia, EmptyState } from './ui'
 import { badgesPrestador, type VerificacionRow, type IntegranteRow } from './verificacion'
 
+// El barrio no está en `valoracion`: se trae de la solicitud que le dio origen.
+// PostgREST tipa el embebido muchos-a-uno como array aunque en runtime llegue un
+// objeto, así que se contemplan las dos formas.
+type ValoracionConSolicitud = Valoracion & {
+  solicitud: { barrio_id: string | null } | { barrio_id: string | null }[] | null
+}
+type ValoracionConBarrio = Valoracion & { barrio_id: string | null }
+
 type PrestadorCompleto = {
   id: string
   nombre: string
@@ -20,7 +28,8 @@ type PrestadorCompleto = {
 export function PerfilJardinero({ prestadorId, onVolver }: { prestadorId: string; onVolver: () => void }) {
   const [prestador, setPrestador] = useState<PrestadorCompleto | null>(null)
   const [especialidades, setEspecialidades] = useState<Especialidad[]>([])
-  const [valoraciones, setValoraciones] = useState<Valoracion[]>([])
+  const [valoraciones, setValoraciones] = useState<ValoracionConBarrio[]>([])
+  const [nombreBarrio, setNombreBarrio] = useState<Record<string, string>>({})
   const [verifs, setVerifs] = useState<VerificacionRow[]>([])
   const [integrantes, setIntegrantes] = useState<IntegranteRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -39,7 +48,7 @@ export function PerfilJardinero({ prestadorId, onVolver }: { prestadorId: string
         supabase.from('prestador_servicio').select('prestador_id,tipo,tarifa').eq('prestador_id', prestadorId),
         supabase
           .from('valoracion')
-          .select('id,prestador_id,puntaje,puntaje_calidad,puntaje_puntualidad,puntaje_comunicacion,puntaje_precio,comentario,respuesta_prestador,created_at')
+          .select('id,prestador_id,puntaje,puntaje_calidad,puntaje_puntualidad,puntaje_comunicacion,puntaje_precio,comentario,respuesta_prestador,created_at,solicitud(barrio_id)')
           .eq('prestador_id', prestadorId)
           .order('created_at', { ascending: false }),
         supabase.from('verificacion').select('tipo,estado,fecha_vencimiento,integrante_id').eq('prestador_id', prestadorId),
@@ -53,7 +62,25 @@ export function PerfilJardinero({ prestadorId, onVolver }: { prestadorId: string
       }
       setPrestador(p.data as PrestadorCompleto)
       setEspecialidades((e.data as Especialidad[]) ?? [])
-      setValoraciones((v.data as Valoracion[]) ?? [])
+      // La reseña se firma con el barrio, no con el nombre: lo que le da peso
+      // frente a otro vecino es que sea de su misma comunidad. Y el nombre se
+      // pidió para que el jardinero supiera quién pedía, no para publicarlo —
+      // usarlo acá sería otra finalidad (Ley 25.326).
+      const filasV = ((v.data as unknown as ValoracionConSolicitud[]) ?? []).map((fila) => {
+        const { solicitud, ...resto } = fila
+        const sol = Array.isArray(solicitud) ? solicitud[0] ?? null : solicitud
+        return { ...resto, barrio_id: sol?.barrio_id ?? null }
+      })
+      setValoraciones(filasV)
+
+      // Nombres de los barrios que aparecen en las reseñas.
+      const barrioIds = [...new Set(filasV.map((x) => x.barrio_id).filter((x): x is string => !!x))]
+      if (barrioIds.length > 0) {
+        const { data: bData } = await supabase.from('barrio').select('id,nombre').in('id', barrioIds)
+        const mapa: Record<string, string> = {}
+        for (const b of (bData as Array<{ id: string; nombre: string }>) ?? []) mapa[b.id] = b.nombre
+        setNombreBarrio(mapa)
+      }
       setVerifs((ver.data as VerificacionRow[]) ?? [])
       setIntegrantes((integ.data as IntegranteRow[]) ?? [])
       setLoading(false)
@@ -141,9 +168,14 @@ export function PerfilJardinero({ prestadorId, onVolver }: { prestadorId: string
           <div className="space-y-3">
             {valoraciones.map((v) => (
               <div key={v.id} className="rounded-lg border border-gray-200 bg-white p-4">
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span className="text-amber-500">{'★'.repeat(v.puntaje)}</span>
-                  <span className="text-gray-400">{new Date(v.created_at).toLocaleDateString('es-AR')}</span>
+                  <span className="text-gray-600">
+                    {v.barrio_id && nombreBarrio[v.barrio_id]
+                      ? `Un vecino de ${nombreBarrio[v.barrio_id]}`
+                      : 'Un vecino'}
+                  </span>
+                  <span className="text-gray-400">· {new Date(v.created_at).toLocaleDateString('es-AR')}</span>
                 </div>
                 {v.comentario && <p className="mt-2 text-sm text-gray-700">{v.comentario}</p>}
                 {v.respuesta_prestador && (
