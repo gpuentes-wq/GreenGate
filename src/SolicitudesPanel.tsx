@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './lib/supabase'
 import { EmptyState } from './ui'
 import { cuandoLabel, esHoy, hoyISO, sumarDiasISO } from './labels'
@@ -42,18 +42,19 @@ type Respuesta = {
 }
 
 // La forma de la insignia dice tanto como el color:
-//   sólido    → necesita que hagas algo (sin responder)
-//   con borde → novedad: pasó algo sin que estuvieras mirando
-//   gris      → lo decidiste vos, no hay nada nuevo
+//   ámbar pleno → necesita que hagas algo (sin responder)
+//   claro con borde → novedad: pasó algo sin que estuvieras mirando
+//   gris        → lo decidiste vos, no hay nada nuevo
 //
 // 'rechazada' es la única gris: es el estado que eligió el propio jardinero.
 // Que lo elijan, que elijan a otro o que den de baja el pedido son las tres
 // cosas que le pasan de afuera, y las tres liberan la fecha que había reservado.
 //
-// Ninguna novedad va en sólido: quedaría igual que 'pendiente' y una solicitud
-// cerrada se leería como una que todavía espera respuesta.
+// 'pendiente' va en ámbar pleno sobre blanco y es lo más fuerte de la pantalla:
+// es la única que pide una acción, y con tres estados en la familia del ámbar
+// necesita separarse de ellos por intensidad, no solo por tono.
 const ESTADO_BADGE: Record<string, string> = {
-  pendiente: 'bg-amber-100 text-amber-700',
+  pendiente: 'bg-amber-500 text-white',
   aceptada: 'bg-gg-light text-gg-dark',
   elegida: 'border border-green-300 bg-green-50 text-green-800',
   no_seleccionada: 'border border-amber-300 bg-amber-50 text-amber-800',
@@ -217,6 +218,27 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
     if (error) setError(error.message)
   }
 
+  // Lo que hay que contestar va arriba. Ordenado por fecha a secas, una
+  // solicitud sin responder de hace tres días quedaba debajo de dos ya cerradas.
+  //
+  // Dentro de las pendientes: primero las urgentes, y después las más viejas —
+  // es al revés que en el resto de la lista, y a propósito: la que más esperó es
+  // la que peor queda sin respuesta. En las ya cerradas manda lo más reciente,
+  // que es donde están las novedades.
+  const ordenadas = useMemo(() => {
+    const esPendiente = (s: Solicitud) => (s.estado === 'pendiente' ? 0 : 1)
+    return solicitudes.slice().sort((a, b) => {
+      if (esPendiente(a) !== esPendiente(b)) return esPendiente(a) - esPendiente(b)
+
+      if (a.estado === 'pendiente') {
+        const urg = (s: Solicitud) => (s.pedido?.es_urgencia ? 0 : 1)
+        if (urg(a) !== urg(b)) return urg(a) - urg(b)
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
+  }, [solicitudes])
+
   const pendientes = solicitudes.filter((s) => s.estado === 'pendiente').length
 
   if (loading) return <p className="text-gray-500">Cargando…</p>
@@ -233,8 +255,16 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
         </EmptyState>
       ) : (
         <div className="space-y-3">
-          {solicitudes.map((s) => (
-            <div key={s.id} className="rounded-xl border border-gray-200 bg-white p-4">
+          {ordenadas.map((s) => (
+            <div
+              key={s.id}
+              className={
+                'rounded-xl border bg-white p-4 ' +
+                // Sin responder es lo único accionable: se marca la tarjeta entera
+                // para que se distinga al bajar por la lista, sin leer la insignia.
+                (s.estado === 'pendiente' ? 'border-amber-300 ring-1 ring-amber-200' : 'border-gray-200')
+              }
+            >
               <div className="flex items-start justify-between gap-2">
                 <div className="font-medium text-gray-900">
                   {s.contacto_nombre ?? 'Vecino'}
