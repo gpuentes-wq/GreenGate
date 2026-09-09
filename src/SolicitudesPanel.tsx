@@ -43,16 +43,20 @@ type Respuesta = {
 
 // La forma de la insignia dice tanto como el color:
 //   sólido    → necesita que hagas algo (sin responder)
-//   con borde → novedad: ya pasó algo y no depende de vos
-//   gris      → cerrado, sin nada nuevo
+//   con borde → novedad: pasó algo sin que estuvieras mirando
+//   gris      → lo decidiste vos, no hay nada nuevo
 //
-// Por eso 'cancelada' no va en amber-100 sólido: quedaría igual que
-// 'pendiente' y una solicitud cerrada se leería como una que espera respuesta.
+// 'rechazada' es la única gris: es el estado que eligió el propio jardinero.
+// Que lo elijan, que elijan a otro o que den de baja el pedido son las tres
+// cosas que le pasan de afuera, y las tres liberan la fecha que había reservado.
+//
+// Ninguna novedad va en sólido: quedaría igual que 'pendiente' y una solicitud
+// cerrada se leería como una que todavía espera respuesta.
 const ESTADO_BADGE: Record<string, string> = {
   pendiente: 'bg-amber-100 text-amber-700',
   aceptada: 'bg-gg-light text-gg-dark',
   elegida: 'border border-green-300 bg-green-50 text-green-800',
-  no_seleccionada: 'bg-gray-100 text-gray-500',
+  no_seleccionada: 'border border-amber-300 bg-amber-50 text-amber-800',
   rechazada: 'bg-gray-100 text-gray-500',
   cancelada: 'border border-amber-300 bg-amber-50 text-amber-800',
 }
@@ -281,9 +285,13 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
                 </p>
               )}
 
+              {/* Mismo tratamiento que la baja: el resultado práctico es idéntico
+                  —la fecha que había reservado queda libre— y hasta ahora eso
+                  no se le decía. */}
               {s.estado === 'no_seleccionada' && (
-                <p className="mt-2 text-sm text-gray-500">
-                  El vecino eligió a otro jardinero para este pedido. No hace falta que esperes.
+                <p className="mt-2 rounded-lg border border-amber-200 bg-amber-100 px-3 py-2 text-sm font-medium text-amber-900">
+                  🗓️ El vecino eligió a otro jardinero para este pedido. Si te habías reservado la fecha, ya podés
+                  liberarla.
                 </p>
               )}
 
