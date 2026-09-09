@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import { EmptyState } from './ui'
 import { misPedidos } from './misPedidos'
-import { cuandoLabel, ordenDisponibilidad } from './labels'
+import { cuandoLabel, esHoy, ordenDisponibilidad } from './labels'
 
 type Pedido = {
   id: string
@@ -292,7 +292,24 @@ export function MisPresupuestos({ barrioId, onVolver }: { barrioId: string; onVo
                           <span className="text-gray-600">
                             {puedeIr ? (
                               <>
-                                Puede ir <strong>{cuandoLabel(c.disponible_desde)}</strong>
+                                Puede ir{' '}
+                                {/* En un pedido urgente lo único que se compara de
+                                    un vistazo es quién puede hoy. Fuera de una
+                                    urgencia, pintar las fechas sería ruido. */}
+                                {pedido.es_urgencia ? (
+                                  <strong
+                                    className={
+                                      'rounded-full px-2 py-0.5 ' +
+                                      (esHoy(c.disponible_desde)
+                                        ? 'bg-green-100 text-green-800'
+                                        : 'bg-amber-100 text-amber-800')
+                                    }
+                                  >
+                                    {cuandoLabel(c.disponible_desde)}
+                                  </strong>
+                                ) : (
+                                  <strong>{cuandoLabel(c.disponible_desde)}</strong>
+                                )}
                               </>
                             ) : (
                               <span className="text-gray-400">{ESTADO_LABEL[c.estado] ?? c.estado}</span>

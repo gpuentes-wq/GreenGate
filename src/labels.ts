@@ -69,6 +69,12 @@ export function cuandoLabel(iso: string | null): string {
   return ddmm
 }
 
+// En un pedido urgente, lo único que importa de la fecha es si es hoy o no.
+// "A coordinar" (null) no es hoy: el vecino no puede contar con eso.
+export function esHoy(iso: string | null): boolean {
+  return iso != null && iso === hoyISO()
+}
+
 // Para ordenar: el que puede ir antes va primero, y "a coordinar" al final.
 export function ordenDisponibilidad(iso: string | null): number {
   if (!iso) return Number.POSITIVE_INFINITY

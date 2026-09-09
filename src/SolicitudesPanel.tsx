@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import { EmptyState } from './ui'
-import { cuandoLabel, hoyISO, sumarDiasISO } from './labels'
+import { cuandoLabel, esHoy, hoyISO, sumarDiasISO } from './labels'
 
 // El celular del propietario no viaja hasta acá: para responder no hace falta, y
 // el contacto va en la otra dirección — el propietario compara lo que recibió y
@@ -98,6 +98,17 @@ function Responder({
           No es un turno reservado: es lo antes que podrías pasar. Si preferís coordinarlo, borrá la fecha.
         </span>
       </label>
+
+      {/* Un urgente contestado para otro día sigue sirviendo: si nadie puede ir
+          hoy, el vecino prefiere saber quién puede mañana antes que recibir tres
+          rechazos. Se avisa para que el jardinero conteste tranquilo, sabiendo
+          que del otro lado se ve la fecha real. */}
+      {urgente && !esHoy(desde) && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          El vecino lo marcó urgente. Si hoy no podés, contestale igual — va a ver que sos para{' '}
+          <strong>{cuandoLabel(desde || null).toLowerCase()}</strong> y decide él.
+        </p>
+      )}
 
       <label className="block text-xs font-medium text-gray-600">
         Querés aclarar algo? (opcional)
