@@ -61,6 +61,14 @@ const ESTADO_LABEL: Record<string, string> = {
   cancelada: 'Dado de baja',
 }
 
+// Estados en los que el jardinero ya contestó y se comprometió con una fecha.
+// En todos ellos tiene que poder ver qué dijo: cuando lo eligen, cuando eligen a
+// otro o cuando dan de baja el pedido, el formulario ya no está y sin esto la
+// fecha que reservó desaparece de la pantalla.
+//
+// 'rechazada' queda afuera a propósito: ahí no comprometió nada.
+const RESPONDIDAS = ['aceptada', 'elegida', 'no_seleccionada', 'cancelada']
+
 // El jardinero responde si PUEDE IR, no con un precio cerrado: no vio el jardín
 // todavía. El estimado es opcional y viaja marcado como a confirmar.
 //
@@ -241,15 +249,21 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
                 <Responder solicitudId={s.id} urgente={!!s.pedido?.es_urgencia} onResponder={responder} />
               )}
 
+              {RESPONDIDAS.includes(s.estado) && (
+                <div className="mt-2 rounded-lg bg-gray-50 px-3 py-2 text-sm">
+                  <p className="text-gray-700">
+                    Le dijiste que podías ir <strong>{cuandoLabel(s.disponible_desde)}</strong>
+                    {s.monto_presupuestado != null && (
+                      <> · estimado ARS {s.monto_presupuestado.toLocaleString('es-AR')}</>
+                    )}
+                  </p>
+                  {s.detalle && <p className="mt-1 text-xs text-gray-500">“{s.detalle}”</p>}
+                </div>
+              )}
+
               {s.estado === 'aceptada' && (
-                <p className="mt-2 text-sm text-gg-dark">
-                  ✓ Dijiste que podés ir · <strong>{cuandoLabel(s.disponible_desde)}</strong>
-                  {s.monto_presupuestado != null && (
-                    <> · estimado ARS {s.monto_presupuestado.toLocaleString('es-AR')}</>
-                  )}
-                  <span className="block text-gray-500">
-                    El vecino está comparando. Si te elige, te va a escribir por WhatsApp.
-                  </span>
+                <p className="mt-2 text-sm text-gray-500">
+                  El vecino está comparando. Si te elige, te va a escribir por WhatsApp.
                 </p>
               )}
 
