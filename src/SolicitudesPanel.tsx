@@ -41,13 +41,20 @@ type Respuesta = {
   monto_presupuestado?: number | null
 }
 
+// La forma de la insignia dice tanto como el color:
+//   sólido    → necesita que hagas algo (sin responder)
+//   con borde → novedad: ya pasó algo y no depende de vos
+//   gris      → cerrado, sin nada nuevo
+//
+// Por eso 'cancelada' no va en amber-100 sólido: quedaría igual que
+// 'pendiente' y una solicitud cerrada se leería como una que espera respuesta.
 const ESTADO_BADGE: Record<string, string> = {
   pendiente: 'bg-amber-100 text-amber-700',
   aceptada: 'bg-gg-light text-gg-dark',
-  elegida: 'bg-green-100 text-green-800',
+  elegida: 'border border-green-300 bg-green-50 text-green-800',
   no_seleccionada: 'bg-gray-100 text-gray-500',
   rechazada: 'bg-gray-100 text-gray-500',
-  cancelada: 'bg-gray-100 text-gray-500',
+  cancelada: 'border border-amber-300 bg-amber-50 text-amber-800',
 }
 
 // El estado se guarda como enum ('no_seleccionada'), que no se puede mostrar
@@ -268,7 +275,7 @@ export function SolicitudesPanel({ prestadorId }: { prestadorId: string }) {
               )}
 
               {s.estado === 'elegida' && (
-                <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm font-medium text-green-800">
+                <p className="mt-2 rounded-lg border border-green-200 bg-green-100 px-3 py-2 text-sm font-medium text-green-900">
                   🎉 Te eligieron para este trabajo. {s.contacto_nombre ?? 'El vecino'} te va a escribir por WhatsApp
                   para coordinar la visita.
                 </p>

@@ -207,7 +207,7 @@ export function JardineroPanel({
         </div>
 
         {elegidas > 0 && (
-          <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm font-medium text-green-800">
+          <p className="mt-2 rounded-lg border border-green-200 bg-green-100 px-3 py-2 text-sm font-medium text-green-900">
             🎉 {elegidas === 1 ? 'Un vecino te eligió' : `${elegidas} vecinos te eligieron`} para su jardín. Van a
             escribirte por WhatsApp para coordinar la visita.
           </p>
