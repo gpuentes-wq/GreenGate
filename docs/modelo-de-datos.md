@@ -4,9 +4,9 @@ Este documento explica, sin tecnicismos, cómo se organizan los datos que susten
 
 ## La idea en una frase
 
-Modelamos **10 entidades** (las "cajas" donde vive cada tipo de dato) y las relaciones entre ellas. La clave del diseño: separar lo que es **información fija** de una persona/lugar de lo que es un **hecho que ocurre** (un trabajo, una reseña, una verificación). Así cada dato se carga una sola vez y sirve para todo.
+Modelamos **12 entidades** (las "cajas" donde vive cada tipo de dato) y las relaciones entre ellas. La clave del diseño: separar lo que es **información fija** de una persona/lugar de lo que es un **hecho que ocurre** (un trabajo, una reseña, una verificación). Así cada dato se carga una sola vez y sirve para todo.
 
-## Las 10 entidades
+## Las 12 entidades
 
 | Entidad | Qué guarda | De tu lista original |
 |---|---|---|
@@ -14,11 +14,13 @@ Modelamos **10 entidades** (las "cajas" donde vive cada tipo de dato) y las rela
 | **Barrio** | Cada barrio/country que gestiona | cantidad de lotes |
 | **Lote** | Cada unidad funcional | nº de lote, m², contacto |
 | **Propietario** | El vecino | contacto (celular, mail) |
-| **Prestador** | El jardinero / proveedor (una persona o un equipo) | nombre, CUIT/CUIL, domicilio, tipo de servicio, horario, zona preferente |
+| **Prestador** | El jardinero / proveedor (una persona o un equipo) | nombre, CUIT/CUIL, DNI, tipo de servicio |
 | **Integrante** | Cada persona real de un prestador-equipo | — (surge al sumar equipos, jul 2026) |
 | **Verificación** | Estado de la documentación (del prestador o de un integrante) | seguro, antecedentes penales |
+| **Pedido** | La necesidad del propietario: una sola, con su descripción, el barrio y si es urgente | — (surge al separar el pedido de la respuesta, sep 2026) |
+| **Solicitud** | La respuesta de *un* prestador a ese pedido: desde cuándo puede ir | — (ídem) |
 | **Trabajo** | Cada servicio realizado | CUIT que trabajó, pago, método de pago |
-| **Valoración** | La reseña de un trabajo | valoración del servicio |
+| **Valoración** | La reseña del trabajo, anclada a la solicitud elegida | valoración del servicio |
 | **Ingreso** *(Fase 2)* | Trazabilidad de entradas al barrio | — |
 
 ## La decisión de diseño más importante
@@ -30,13 +32,26 @@ En tu lista, varios datos figuraban dentro de **"Propietario"**:
 - la valoración del servicio
 - la vía / método de pago
 
-**Esos datos no describen al propietario: describen cada _trabajo_ que pasó.** Por eso los pusimos en la entidad **Trabajo** (y la nota en **Valoración**). Ventaja: el mismo dato sirve a la vez para:
+**Esos datos no describen al propietario: describen cada _trabajo_ que pasó.** Por eso los pusimos en la entidad **Trabajo** (y la nota en **Valoración**). El razonamiento sigue valiendo, aunque `Trabajo` todavía no se escriba desde la app — ver más abajo por qué. Ventaja: el mismo dato sirve a la vez para:
 
 - calcular el **puntaje** del prestador (promedio de sus valoraciones),
 - mostrar el **historial** de servicios de cada lote,
 - y, más adelante, sumar los **ingresos** del prestador.
 
 Sin duplicar ni desincronizar nada.
+
+## La segunda decisión importante: un pedido, muchas respuestas (sep 2026)
+
+Al principio había una sola caja, `Solicitud`, que era **1 propietario → 1 prestador**. Si el vecino quería consultar a tres jardineros, se creaban tres filas sueltas, sin nada que las relacionara: no se podían comparar porque el sistema no sabía que eran la misma necesidad.
+
+Se partió en dos:
+
+- **Pedido** — la necesidad. Se escribe una vez: qué necesita, en qué barrio, si es urgente.
+- **Solicitud** — la respuesta de cada jardinero a ese pedido. Cuántos jardineros eligió el vecino, tantas solicitudes.
+
+Es lo que hace posible la comparación: las N respuestas cuelgan del mismo pedido, así que ponerlas una al lado de la otra es leer una lista, no cruzar datos sueltos.
+
+**Lo que la solicitud guarda cambió sobre la marcha.** Se había pensado que el jardinero respondiera con un precio. No funciona: no puede cotizar un jardín que no vio, así que el número era una adivinanza o un precio inflado para cubrirse — y el vecino los comparaba como si fueran equivalentes. Hoy responde **desde cuándo puede ir** (`disponible_desde`), con una aclaración y un estimado opcional marcado como a confirmar. El precio se acuerda en la visita.
 
 ## Otras dos decisiones
 
@@ -69,11 +84,23 @@ Esta regla vive en un único lugar del código (`src/verificacion.ts`), consumid
 - Un **Prestador** trabaja en muchos **Barrios**, y cada barrio tiene muchos prestadores (N:M).
 - Un **Prestador** tiene varios **Integrantes** cuando es un equipo (1:N). Si no tiene ninguno, es unipersonal.
 - Un **Prestador** (o, si es equipo, cada uno de sus **Integrantes**) tiene varias **Verificaciones** (una por tipo: antecedentes, seguro, identidad).
+- Un **Pedido** tiene muchas **Solicitudes** (1:N) — una por cada prestador que el propietario eligió consultar.
+- Una **Solicitud** apunta a un **Prestador** y a un **Pedido**.
 - Un **Trabajo** conecta un **Lote** + un **Propietario** + un **Prestador**.
-- Una **Valoración** pertenece a un **Trabajo** y apunta a un **Prestador**.
+- Una **Valoración** apunta a un **Prestador** y cuelga de la **Solicitud elegida**.
 
 ### Co-propiedad (decisión abierta)
 Hoy cada lote tiene **un** propietario. Si más adelante necesitás que un lote tenga **más de un dueño** (matrimonios, familias), se agrega una tabla intermedia `lote_propietario` sin romper nada de lo ya cargado.
+
+## Por qué la reseña cuelga de la solicitud y no del trabajo
+
+El diseño original decía que la valoración pertenecía a un **Trabajo**, y conceptualmente sigue siendo lo correcto: una reseña califica un servicio prestado.
+
+Pero `Trabajo` exige un **lote**, y sin login el propietario no tiene lote asignado — se identifica por los pedidos guardados en su navegador. Esperar al login para tener reseñas habría dejado el directorio con puntajes de ejemplo indefinidamente, que es justamente lo que el producto promete resolver.
+
+La salida fue anclar la reseña a la **solicitud elegida**. Es una prueba suficiente de que el trato existió: ese vecino eligió a ese jardinero para ese pedido. Un índice único sobre `solicitud_id` garantiza **una reseña por trabajo**, que es lo que impide inflar un puntaje.
+
+`Trabajo` queda modelada y sin uso, esperando a la Fase 2: con pago digital de por medio hay un hecho concreto que registrar, y con login el lote deja de ser un obstáculo.
 
 ## El directorio (corazón del MVP)
 

@@ -13,8 +13,11 @@ flowchart TD
   U1["👤 Propietario<br/>busca y contrata"] --> APP
   U2["🌿 Jardinero<br/>se suma y responde"] --> APP
   U3["🏘️ Administración<br/>valida y controla"] --> APP
-  APP["Netlify · App React (Vite + Tailwind)<br/>greengate-arg.netlify.app"] <-->|"lee y escribe datos<br/>(clave anon)"| SB[("Supabase<br/>PostgreSQL + API REST + Auth")]
+  APP["Netlify · App React (Vite + Tailwind)<br/>greengate.com.ar"] <-->|"lee y escribe datos<br/>(clave anon)"| SB[("Supabase<br/>PostgreSQL + API REST + Auth")]
+  V["🔎 Visitante de la landing"] --> LP["Netlify · Landing estática<br/>greengate.com.ar/landing/"]
+  LP -->|"formulario de interés"| NF[("Netlify Forms<br/>respuestas del piloto")]
   GH["GitHub · código fuente"] -.->|"deploy automático en cada push"| APP
+  GH -.-> LP
 ```
 
 ## Los tres pilares
@@ -35,6 +38,7 @@ GreenGate elimina la pieza del medio: **Supabase genera la API automáticamente 
 
 - **Frontend:** React + Vite + TypeScript + Tailwind CSS. Es una SPA (single-page application) estática: se compila a archivos HTML/JS/CSS que Netlify sirve. La navegación entre las vistas (Propietario / Jardinero / Administración) ocurre en el navegador.
 - **Datos y API:** Supabase (PostgreSQL gestionado). La app usa la librería `@supabase/supabase-js` para leer y escribir.
+- **Landing:** `landing/index.html`, HTML y CSS a mano, sin build ni dependencias. Vive fuera de la app a propósito: la compila nadie, Netlify la copia tal cual (`cp -r landing dist/landing` en `netlify.toml`). Su formulario de interés usa **Netlify Forms** — no toca Supabase, así que un visitante que solo deja sus datos nunca llega a la base.
 - **Hosting:** Netlify (deploy continuo conectado al repo).
 - **Control de versiones:** Git + GitHub.
 
@@ -50,7 +54,7 @@ Se edita el código → se confirma (`commit`) y se sube (`push`) a GitHub → N
 
 ## Modelo de datos
 
-Vive dentro de Supabase (PostgreSQL): **15 tablas + 1 vista**. El lenguaje del dominio está en español.
+Vive dentro de Supabase (PostgreSQL): **17 tablas + 1 vista**. El lenguaje del dominio está en español.
 
 **Entidades principales:**
 - `administracion` — el cliente B2B (la administradora del barrio).
@@ -60,15 +64,28 @@ Vive dentro de Supabase (PostgreSQL): **15 tablas + 1 vista**. El lenguaje del d
 - `prestador` — la oferta (jardineros; el campo `tipo_servicio` deja la puerta abierta a otros rubros). Puede ser una persona sola o un equipo.
 - `integrante` — cada persona real de un prestador-equipo. Antecedentes e identidad se verifican por persona; el seguro queda compartido a nivel del prestador. Un prestador unipersonal no usa esta tabla.
 - `verificacion` — estado de la documentación (del prestador entero, o de un integrante puntual).
-- `trabajo` — cada servicio realizado (precio, método de pago, comisión de la plataforma).
-- `valoracion` — reseña de un trabajo (de acá se calcula el puntaje).
-- `solicitud` — pedido de contacto de un propietario a un prestador.
+- `pedido` — la necesidad del propietario: una sola, con su descripción, el barrio y si es urgente.
+- `solicitud` — la respuesta de *un* prestador a ese pedido: desde cuándo puede ir, una aclaración y un estimado opcional. Un pedido tiene tantas solicitudes como jardineros se eligieron, y eso es lo que permite compararlas.
+- `valoracion` — reseña del trabajo. Se ancla a la **solicitud elegida** (`solicitud_id`), que es la prueba de que el trato existió; un índice único garantiza una sola reseña por trabajo. De acá se calcula el puntaje del directorio.
+- `trabajo` — cada servicio realizado (precio, método de pago, comisión de la plataforma). **Modelada pero todavía sin uso**: exige `lote_id`, y sin login el propietario no tiene lote asignado. Se activa en Fase 2, con el pago digital.
 
-**Tablas de apoyo:** `prestador_servicio` (especialidades), `prestador_barrio` (habilitación por barrio), `prestador_foto` (portfolio), `ingreso` (trazabilidad de accesos, Fase 2) y `perfil` (vínculo con el login, a futuro).
+**Tablas de apoyo:** `prestador_servicio` (especialidades), `prestador_barrio` (habilitación por barrio), `prestador_foto` (portfolio), `prestador_sugerido` (jardineros que propone un vecino y la administración todavía no dio de alta), `ingreso` (trazabilidad de accesos, Fase 2) y `perfil` (vínculo con el login, a futuro).
 
 **Vista `prestador_directorio`:** calcula, para cada prestador, el puntaje promedio y la cantidad de reseñas. Las insignias de verificación (antecedentes/seguro/identidad) **no** viven en esta vista — las calcula `src/verificacion.ts` en el frontend, porque para un equipo hace falta cruzar los datos de cada integrante, algo que un `exists()` simple en SQL no puede expresar bien sin arriesgar una segunda fuente de verdad.
 
-Detalle completo del esquema: [`supabase/schema.sql`](../supabase/schema.sql) · explicación en lenguaje simple: [`docs/modelo-de-datos.md`](modelo-de-datos.md).
+⚠️ **El esquema vigente no está en un solo archivo.** `schema.sql` refleja el estado original; todo lo posterior vive en los **14 archivos `migracion-*.sql`**, que hay que leer en orden para tener la foto completa. Es deuda conocida: está pendiente regenerarlo con `pg_dump --schema-only`.
+
+Detalle del esquema base: [`supabase/schema.sql`](../supabase/schema.sql) · explicación en lenguaje simple: [`docs/modelo-de-datos.md`](modelo-de-datos.md).
+
+## Identidad sin login
+
+Todavía no hay Auth, así que cada rol se identifica de una forma distinta y provisoria:
+
+- **Propietario:** los ids de sus pedidos se guardan en el `localStorage` del navegador (`src/misPedidos.ts`). Por eso "Mis pedidos" solo aparece donde pidió, y se pierde si limpia el navegador o cambia de dispositivo.
+- **Jardinero y administración:** eligen su perfil de una lista al entrar. Cualquiera puede elegir cualquiera — es deliberado, para poder recorrer el producto entero sin credenciales.
+- **Reseña:** el link `?resena=<id de la solicitud>` funciona como credencial de un solo uso; quien lo tiene puede dejar esa reseña, y solo esa.
+
+Las tres desaparecen cuando entre Supabase Auth, y son la razón por la que el RLS sigue apagado.
 
 ## Configuración y claves
 
@@ -95,16 +112,18 @@ En desarrollo local viven en un archivo `.env` (ignorado por Git). En producció
 ```
 greengate/
 ├── src/                    App React (vistas, componentes, cliente Supabase)
+├── landing/
+│   └── index.html          Landing pública, HTML plano sin build
 ├── supabase/
-│   ├── schema.sql          Esquema de la base (15 tablas + vista)
+│   ├── schema.sql          Esquema base (15 tablas + vista)
 │   ├── seed.sql            Datos de ejemplo (barrios de zona norte)
-│   ├── migracion-solicitudes.sql
-│   ├── migracion-integrantes.sql
+│   ├── migracion-*.sql     14 migraciones, en orden cronológico
+│   ├── preparar-demo.sql   Limpia lo transaccional antes de mostrar la app
 │   ├── rls-dev.sql         Desactiva RLS para el piloto
 │   └── policies.sql        Políticas de seguridad (borrador, para el login)
-├── docs/
-│   ├── arquitectura.md     (este documento)
-│   └── modelo-de-datos.md  El modelo explicado sin tecnicismos
+├── docs/                   11 documentos: arquitectura, modelo de datos,
+│                           specs por rol, cobertura y guía de revisión
+├── scripts/ia/             Prototipo de IA de descubrimiento (no conectado)
 ├── netlify.toml            Configuración de despliegue
 └── .env.example            Plantilla de variables de entorno
 ```
@@ -118,7 +137,9 @@ greengate/
 
 | Recurso | Dirección |
 |---|---|
-| App publicada | https://greengate-arg.netlify.app |
+| App publicada | https://greengate.com.ar · alternativa: https://greengate-arg.netlify.app |
+| Landing | https://greengate.com.ar/landing/ |
+| Respuestas del formulario | Panel de Netlify → Forms → `interesados` |
 | Repositorio | https://github.com/gpuentes-wq/GreenGate |
 | Proyecto Supabase | https://supabase.com/dashboard (proyecto GreenGate) |
 

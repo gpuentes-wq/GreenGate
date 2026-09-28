@@ -10,9 +10,11 @@ Este documento cruza, línea por línea, lo que los **tres Value Proposition Can
 |---|---|---|---|---|
 | 👤 Propietario | 8 | 5 | 1 | 2 |
 | 🌿 Jardinero | 8 | 5 | 1 | 2 |
-| 🏘️ Administración | 8 | 5 | 2 | 1 |
+| 🏘️ Administración | 8 | 5 | 1 | 2 |
 
-**Lectura rápida:** el MVP cubre sólidamente el **núcleo validado por la encuesta** (directorio con calificaciones y verificación) en los tres segmentos. Los huecos más importantes, y en los tres casos son los mismos dos patrones: **(1) no hay flujo para que el propietario deje una reseña real** (el puntaje que se ve hoy viene de datos de ejemplo, no de un ciclo de uso real) y **(2) no hay pago digital ni agenda** — ambos declarados como Fase 2 desde el Módulo 5, así que no es una sorpresa, pero conviene tenerlo explícito acá.
+**Lectura rápida:** el MVP cubre el **núcleo validado por la encuesta** —directorio con calificaciones y verificación— en los tres segmentos, y desde septiembre cubre también **el ciclo completo de contratación y reseña**, que era el hueco más serio de la versión anterior de este documento: el propietario pide visitas a varios jardineros, compara respuestas, elige uno, y después lo califica; el jardinero puede responder esa reseña. **El puntaje del directorio ya no sale de datos de ejemplo: se calcula sobre reseñas de uso real.**
+
+Lo que queda pendiente es lo declarado como Fase 2 desde el Módulo 5 —**pago digital y agenda**— más dos piezas de producto que se detallan al final: el **login** y la **configuración de requisitos por barrio**.
 
 ---
 
@@ -24,14 +26,14 @@ Este documento cruza, línea por línea, lo que los **tres Value Proposition Can
 
 | Lo que promete el canvas (Products & Services / Pain Relievers) | MVP v1 | Dónde |
 |---|---|---|
-| Directorio de jardineros activos del barrio, con calificaciones | ✅ | `PropietarioDirectorio.tsx` + vista `prestador_directorio` |
+| Directorio de jardineros activos del barrio, con calificaciones | ✅ | `PropietarioDirectorio.tsx` + vista `prestador_directorio`. El puntaje se deriva de `valoracion`, alimentada por reseñas reales |
 | Perfiles con fotos de trabajos anteriores y especialidades | ✅ | Portfolio con lightbox, badges de especialidad |
 | Comparador por precio, calificación y especialidad | ✅ | Tarjetas ordenadas por puntaje, con tarifa y especialidades visibles |
 | Insignia de verificado (antecedentes, seguro/ART, identidad) | ✅ | Insignias derivadas de `verificacion.ts`, filtro "Solo verificados" |
-| Canal de contacto respaldado por el barrio | ✅ | Botón "Contactar" → tabla `solicitud`, el jardinero la recibe |
-| Reserva y agendamiento desde el celular | ⏳ | Fase 2 |
+| Canal de contacto respaldado por el barrio | ✅ | Pide una visita a varios jardineros a la vez (1 `pedido` → N `solicitud`), compara las respuestas en "Mis pedidos", elige a uno y recién ahí se abre el WhatsApp. Puede dar de baja el pedido y los jardineros se enteran |
+| Reserva y agendamiento desde el celular | ⏳ | Fase 2. Existe el primer tramo —el jardinero responde desde cuándo puede ir y el propietario compara por esa fecha— pero el turno se acuerda por WhatsApp, no en la app |
 | Pago digital (MercadoPago/tarjeta) con registro del acuerdo | ⏳ | Fase 2 (`trabajo.metodo_pago` existe en el schema, sin UI) |
-| Historial de servicios + reemplazo/jardinero de urgencia | 🟡 | La tabla `trabajo` existe y guarda el historial, pero el propietario no lo ve en pantalla; **tampoco hay forma de que el propietario deje una reseña** — los puntajes que ve hoy vienen de datos de ejemplo, no de un ciclo real de "contraté → califico" |
+| Historial de servicios + reemplazo/jardinero de urgencia | 🟡 | **Urgencias resuelto**: los jardineros declaran si las atienden, el directorio filtra por eso y el pedido puede marcarse urgente, con la respuesta distinguiendo quién puede ir hoy. **Historial parcial**: el propietario ve sus pedidos y las respuestas en "Mis pedidos", pero no un historial de trabajos de su propiedad — la tabla `trabajo` sigue sin escribirse desde la app |
 
 ---
 
@@ -44,8 +46,8 @@ Este documento cruza, línea por línea, lo que los **tres Value Proposition Can
 | Lo que promete el canvas (Products & Services / Pain Relievers) | MVP v1 | Dónde |
 |---|---|---|
 | Onboarding de baja fricción, sin exigir formalización tributaria | ✅ | `JardineroOnboarding.tsx` — CUIT/condición fiscal explícitamente opcionales |
-| Perfil verificado con calificaciones y portfolio de fotos | ✅ | Mismo perfil que ve el propietario; foto + reseñas |
-| Bandeja de solicitudes de propietarios | ✅ | `SolicitudesPanel.tsx` — aceptar/rechazar pedidos de contacto |
+| Perfil verificado con calificaciones y portfolio de fotos | ✅ | Mismo perfil que ve el propietario: fotos, reseñas reales firmadas por barrio, y **derecho a réplica** — puede responder públicamente cada reseña (`valoracion.respuesta_prestador`) |
+| Bandeja de solicitudes de propietarios | ✅ | `SolicitudesPanel.tsx` — responde desde cuándo puede ir, con una aclaración y un estimado opcional. Ve cuándo lo eligen, cuándo eligen a otro y cuándo dan de baja un pedido, y puede pedirle la reseña al vecino |
 | Vidriera de especialidades (poda, diseño, riego, fumigación) | ✅ | Selector de especialidades adicionales en el alta/edición de perfil |
 | Requisitos de ingreso unificados y preconfigurados por barrio | 🟡 | El schema soporta requisitos por barrio (`barrio.requiere_*`), pero hoy **no hay UI** para que la administración los configure; se crean siempre los 3 tipos de verificación por default |
 | El historial queda en la plataforma, no se pierde al perder un cliente | ✅ | Los datos del prestador y sus verificaciones persisten en Supabase, independientes de cualquier propietario puntual |
@@ -66,17 +68,28 @@ Este documento cruza, línea por línea, lo que los **tres Value Proposition Can
 | Alertas automáticas de vencimiento de documentación | ✅ | Sección "Documentación que requiere atención" (vencidos + por vencer en 30 días), derivada por `verificacion.ts` — no hay estados contradictorios entre pantallas |
 | Registro digital de prestadores habilitados por barrio | ✅ | Tabla `prestador_barrio`, alta y gestión de barrios en el panel |
 | Directorio curado de servicios certificados para compartir con vecinos | ✅ | El mismo directorio que ve el propietario nace de la validación que hace el admin |
-| Historial y calificaciones que respaldan decisiones ante quejas | 🟡 | Existe el dato (`valoracion`), pero — igual que en Propietario — no hay flujo real para generarlo desde el uso; hoy es solo de ejemplo |
+| Historial y calificaciones que respaldan decisiones ante quejas | ✅ | Las calificaciones ya nacen del uso real (pedido → elección → reseña) y el panel las muestra por prestador, con promedio y cantidad (`AdminBarrioPanel.tsx`). Ante una queja, la administración tiene con qué respaldarse |
 | Personalización de requisitos por barrio | 🟡 | Campo en el schema (`barrio.requiere_antecedentes/seguro_art/identidad`), sin UI en el alta de barrio (`AltaBarrioModal.tsx`) para configurarlo |
 | Registro y geolocalización de cada ingreso vinculado al lote, en tiempo real | ⏳ | Fase 2 — tabla `ingreso` ya modelada, sin integración con el control de accesos del barrio ni UI |
 | Detección en tiempo real de un prestador operando en más de un lote simultáneamente | ⏳ | Fase 2 (depende de la integración de accesos de arriba) |
 
 ---
 
-## Los dos huecos que se repiten en los tres segmentos
+## Lo que se cerró desde la versión anterior
 
-1. **No hay ciclo de reseña real.** El puntaje y las calificaciones que se ven hoy en el directorio vienen de datos de ejemplo (`seed.sql`), no de un flujo donde un propietario que contrató a alguien pueda calificarlo después. Es la pieza que le falta al "un solo registro, tres lecturas distintas" del Módulo 5 para funcionar con datos reales. Candidato natural para la próxima iteración, junto con el login.
-2. **Pago digital y agenda son, a propósito, Fase 2.** Coincide con lo que ya definió el Módulo 5 — no es un olvido, es la secuencia planeada. Vale la pena repetirlo así de explícito acá para que un revisor no lo lea como una falla.
+**El ciclo de reseña real.** Era el hueco número uno de este documento: el puntaje venía de `seed.sql` y no había forma de que un propietario calificara a quien contrató. Hoy el circuito cierra entero — el propietario pide visitas, elige a uno, lo califica desde "Mis pedidos" o desde un link que el propio jardinero le pasa por WhatsApp, y el jardinero puede responder esa reseña. Es lo que le faltaba al "un solo registro, tres lecturas distintas" del Módulo 5 para funcionar con datos reales.
+
+Junto con eso se cerraron el **flujo de pedidos y visitas** (un pedido a varios jardineros, comparación, elección y baja) y las **urgencias** (marca del prestador, filtro en el directorio y pedido urgente).
+
+## Lo que sigue abierto
+
+1. **Pago digital y agenda son, a propósito, Fase 2.** Coincide con lo que ya definió el Módulo 5 — no es un olvido, es la secuencia planeada. Vale la pena repetirlo así de explícito para que un revisor no lo lea como una falla.
+2. **No hay login.** El propietario se identifica por los pedidos guardados en su navegador (`localStorage`), así que pierde el acceso a sus presupuestos si cambia de dispositivo o limpia los datos. Es el límite conocido del piloto y la condición para activar las políticas de seguridad por rol, que ya están escritas en `supabase/policies.sql`.
+3. **La administración no puede configurar qué documentación exige.** Las columnas `barrio.requiere_*` existen desde el principio pero no hay pantalla: hoy se crean siempre los tres tipos de verificación. Es el único ítem 🟡 que queda en los tres canvas.
+
+## El riesgo que no es técnico
+
+El circuito de reseñas funciona, pero **arranca vacío**. El puntaje del directorio solo vale si hay reseñas reales cargadas, y para las primeras hace falta empujar a mano: pedirle a los primeros vecinos que elijan a alguien que después lo califiquen. Sin ese empujón inicial, el directorio sigue mostrando los datos de ejemplo y la propuesta de valor no se sostiene sola.
 
 ## Qué NO cubre este documento
 

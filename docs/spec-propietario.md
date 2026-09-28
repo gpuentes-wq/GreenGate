@@ -1,85 +1,88 @@
 # GreenGate · Especificación de pantallas — Propietario
 
-Documento de referencia para el desarrollo de las pantallas del rol propietario en el MVP. Se apoya en lo ya definido en [`estrategia-piloto.md`](estrategia-piloto.md) (flujo de IA, comparación multi-jardinero) y [`catalogo-servicios.md`](catalogo-servicios.md) (esquema de preguntas por servicio).
+Documento de referencia para las pantallas del rol propietario. Se apoya en lo definido en [`estrategia-piloto.md`](estrategia-piloto.md) (flujo de IA, comparación multi-jardinero) y [`catalogo-servicios.md`](catalogo-servicios.md) (esquema de preguntas por servicio).
+
+> **Este documento se escribió como diseño previo y se actualizó una vez construido.** Cada pantalla lleva su estado: **✅** construida · **🟡** parcial · **⏳** no empezada. Donde el diseño cambió respecto de lo planeado, está dicho y explicado — esas diferencias son el aprendizaje del período, no un desvío a corregir.
 
 ## Datos de login (para más adelante)
 
-El login (Supabase Auth) no está incluido en este MVP todavía, pero al implementarlo hay que capturar: **Nombre, mail, teléfono, barrio y lote.** Es la base para conectar al propietario con el resto del modelo (filtrar por su barrio, asociar sus trabajos a su lote).
+El login (Supabase Auth) sigue sin estar. Al implementarlo hay que capturar: **Nombre, mail, teléfono, barrio y lote.** Es la base para conectar al propietario con el resto del modelo (filtrar por su barrio, asociar sus trabajos a su lote).
+
+Mientras tanto, el propietario se identifica por los ids de sus pedidos guardados en el navegador (`src/misPedidos.ts`): "Mis pedidos" solo aparece donde pidió, y se pierde al cambiar de dispositivo.
 
 ## Las 6 pantallas
 
-### 1. Solicitud de servicio
+### 1. Solicitud de servicio · 🟡
 
-- Cuadro de texto libre para describir la necesidad → dispara la IA, que preselecciona los prestadores disponibles (se ven en la pantalla siguiente).
-- **Acceso rápido a "Urgencia"**, separado del cuadro de texto: un atajo directo a los jardineros de jardinería general marcados como disponibles para urgencia ahora, sin pasar por el flujo completo de descripción. Ver `spec-jardinero.md` (el tilde "Abierto a servicios de urgencia") y la sección "Diferencial: servicio de urgencia" en `estrategia-piloto.md`.
+- Cuadro de texto libre para describir la necesidad. **Existe, pero no dispara la IA**: hoy es el campo "Qué necesitás" del modal de pedido, y el texto viaja tal cual al jardinero. El prototipo de IA está en `scripts/ia/`, sin conectar — falta decidir dónde vive la clave de API en producción.
+- **Acceso a urgencias**: resuelto de otra forma que la planeada. En vez de un atajo separado, el directorio tiene un filtro **"⚡ Solo urgencias"** y el pedido puede marcarse urgente con un tilde. La urgencia **informa, no rutea**: el pedido le llega igual a todos los elegidos, marcado, y si alguno no atiende urgencias el modal lo avisa antes de enviar. Se hizo así para no sacarle al jardinero la decisión de tomar *esa* urgencia.
 
-> La recurrencia (si el trabajo termina siendo puntual o se vuelve mensual) ya no se elige de antemano acá — se define recién en la conversación de cotización, entre propietario y jardinero (ver pantalla 5).
+> La recurrencia (si el trabajo es puntual o mensual) no se elige acá — se define en la conversación entre propietario y jardinero, después de la visita.
 
-> Esta descripción inicial es liviana a propósito: sirve para que la IA clasifique el tipo de servicio y arme la lista de candidatos, no busca ser exhaustiva todavía. Es el mismo pedido que se termina de completar en la pantalla 4 (no son dos descripciones independientes) — así el propietario no tiene que responder todo el detalle antes de saber quién está disponible en su barrio.
+### 2. Listado de jardineros · ✅
 
-### 2. Listado de jardineros
+- Listado filtrado por barrio, con buscador por nombre. Filtros **"Solo verificados"** y **"⚡ Solo urgencias"**.
+- Muestra por cada prestador: nombre, puntaje resumen, servicios, estado de verificación e insignia de urgencia.
+- **Si no encuentra a quien busca**: "Proponé un prestador" carga el lead en `prestador_sugerido`, para que la administración lo dé de alta.
+- **Selección múltiple**: se tildan dos o tres y la barra inferior abre el modal. Cambió el nombre: es **"Seleccionar para pedir visita"**, no presupuesto (ver pantalla 5).
 
-- Listado de prestadores filtrado por barrio.
-- Buscador por nombre y/o tipo de servicio.
-- Muestra por cada prestador: nombre, reseña (puntaje resumen), tipos de servicio, estado de verificación.
-- **Si no encuentra a quien busca**: opción de recomendar/proponer que se incorpore un nuevo proveedor a la plataforma (queda como funcionalidad prevista en esta pantalla; cómo se comunica ese lead se define más adelante).
-- **Selección múltiple**: el propietario elige a qué jardineros quiere contactar para pedir presupuesto. Al apretar "Contactar", se dispara la IA para hacer las preguntas de validación del trabajo (ver pantalla 4) — puede abrirse como una pantalla de diálogo.
+### 3. Perfil completo del jardinero · ✅
 
-### 3. Perfil completo del jardinero
+Se accede haciendo click en un jardinero desde el listado:
 
-Se accede haciendo click en un jardinero desde el listado. Es una ampliación con más detalle de lo que ya se muestra en la pantalla 2:
+- Todas las reseñas, firmadas como *"Un vecino de <barrio>"*, con la respuesta del prestador si la escribió.
+- Experiencia, servicio principal con tarifa mensual de referencia, servicios adicionales y documentación.
 
-- Todas las reseñas que le escribieron (no solo el puntaje resumen).
-- Experiencia.
-- Precios de referencia.
-- Posibilidad de cargar una nueva reseña.
+Pantalla informativa, con botón para volver. **La reseña no se carga acá**, como se había previsto: este perfil lo ve cualquiera, así que un formulario suelto no tendría cómo saber si el que mira trató con ese jardinero. Se deja desde "Mis pedidos", sobre el jardinero elegido.
 
-Pantalla puramente informativa, con botón para volver atrás.
+### 4. Especificación de trabajo (IA) · ⏳
 
-### 4. Especificación de trabajo
+El diálogo con la IA para definir el alcance —fotos, datos del jardín, preguntas por servicio— **no está construido**. Hoy esa información se reemplaza con el campo de texto libre de la pantalla 1 y con la aclaración que escribe el jardinero al responder.
 
-Es la interacción en cuadro de diálogo entre el propietario y la IA para definir el alcance del servicio, previo a enviarlo al/los jardinero/s seleccionados en la pantalla 2. Puede incluir:
+Las columnas donde colgaría (`detalle_estructurado` jsonb, `fotos_urls`) todavía no existen en `pedido`: se suman cuando el flujo de IA se conecte.
 
-- Fotos.
-- Datos específicos del jardín.
-- Comentarios que amplíen la necesidad.
+### 5. Mis pedidos · ✅ *(era "Presupuestos")*
 
-> Continúa sobre la misma descripción de la pantalla 1 — la IA retoma lo ya escrito y sigue completando con las preguntas puntuales del esquema por servicio (ver `catalogo-servicios.md`), en vez de arrancar de cero. Es la misma necesidad, completándose en dos pasos.
+**Acá está el cambio de diseño más importante del período.** La pantalla se había pensado como comparación de presupuestos con monto. No funcionaba: **un jardinero no puede cotizar un jardín que no vio**. El número que devolvía sobre una descripción de dos renglones era una adivinanza que después corregía, o un precio inflado para cubrirse — y el propietario los comparaba como si fueran equivalentes.
 
-### 5. Presupuestos
+Lo que se construyó en su lugar:
 
-- Respuestas recibidas con presupuesto de los prestadores contactados.
-- El propietario selecciona la que más le interesa para confirmar la contratación.
-- **Forma de pago**: se elige preferencia entre **efectivo** y/o **transferencia**. No se paga a través de la plataforma en este primer MVP (eso queda para una versión posterior).
-- **Cierre del trabajo**: lo puede cerrar el propietario o el jardinero. El cierre habilita la carga de la reseña y deja cerrado el circuito.
+- El pedido busca una **visita**, no un número. Cada jardinero responde **desde cuándo puede ir**, con una aclaración y un estimado **opcional**, siempre marcado *"a confirmar en la visita"*.
+- Las respuestas se muestran como tarjetas, **ordenadas por quién puede ir antes**. En un pedido urgente se distingue con color quién puede hoy.
+- **Elegir es un acto explícito**: el elegido pasa a `elegida` y lo ve en su panel; los demás pasan a `no_seleccionada` y dejan de esperar. Recién ahí se abre el WhatsApp, con el mensaje redactado.
+- **Dar de baja** ("Ya no lo necesito") cierra el pedido para todos, así el que respondió no queda esperando indefinidamente.
+- El precio real se acuerda en la visita, fuera de la app. **Forma de pago**: efectivo o transferencia, entre las partes. No se paga por la plataforma en este MVP.
 
-### 6. Perfil del propietario
+El **cierre bilateral del trabajo** que se había previsto no se construyó: en su lugar, la reseña se ancla a la solicitud elegida, que ya es prueba suficiente de que el trato existió. Ver pendientes.
 
-- Sus datos.
-- Historial de trabajos contratados, y con quién.
-- Reseñas pendientes y realizadas.
+### 6. Perfil del propietario · ⏳
 
-## Cambio de modelo de datos necesario
+Sus datos, historial de trabajos y reseñas pendientes. **Depende del login**: sin identidad persistente no hay a quién colgarle un perfil. Lo más cercano hoy es "Mis pedidos", que muestra los pedidos de ese navegador.
 
-Hoy la tabla `solicitud` (`supabase/schema.sql`) es **1 propietario → 1 prestador**: no tiene monto, no tiene fotos. El flujo de arriba necesita **1 pedido → N prestadores elegidos → N presupuestos comparables → 1 elegido → 1 trabajo confirmado**. Esto implica separar el concepto en dos:
+## El cambio de modelo de datos — hecho
 
-- **`pedido` (tabla nueva)**: la necesidad estructurada que arma la pantalla 1 + 4. Campos propuestos: `propietario_id`, `barrio_id`, `lote_id`, `tipo_servicio`, `descripcion`, `detalle_estructurado` (jsonb — lo que arma la IA según el esquema de `catalogo-servicios.md`: alcance, tamaño, altura, etc.), `fotos_urls`, `created_at`. (No lleva recurrencia — eso se define recién en la cotización, no en el pedido inicial.)
-- **`solicitud` (se extiende)**: pasa a representar la cotización de *cada* prestador elegido para un pedido. Se le suma `pedido_id` (nueva referencia) y `monto_presupuestado`. Mantiene el resto de sus campos actuales (`estado`, `mensaje`, `contacto_nombre`, `contacto_celular`).
+Lo que este documento proponía se construyó, con diferencias:
 
-Esto conecta directo con la comparación multi-jardinero ya diseñada en `estrategia-piloto.md`.
+- **`pedido` (tabla nueva)** — hecha. Tiene `propietario_id`, `barrio_id`, `lote_id`, `tipo_servicio`, `descripcion`, `contacto_nombre`, `created_at`, más dos que no estaban previstos: `es_urgencia` y `cancelado_en`. **No tiene** `detalle_estructurado` ni `fotos_urls`: esperan al flujo de IA.
+- **`solicitud` (extendida)** — hecha. Se le sumó `pedido_id` y `monto_presupuestado`, y después `disponible_desde` (la fecha que reemplazó al precio como criterio de comparación), `detalle` y `updated_at`. `estado_solicitud` ganó tres valores: `elegida`, `no_seleccionada` y `cancelada`.
+- **`contacto_celular` dejó de pedirse.** El jardinero no necesita el teléfono del vecino para responder, y el contacto va en sentido inverso: se abre cuando el propietario elige.
+- **`valoracion.solicitud_id`** — no estaba en el diseño original. Ancla la reseña a la solicitud elegida, con un índice único que garantiza una por trabajo.
+
+Ver `supabase/migracion-pedido.sql`, `migracion-visita.sql`, `migracion-disponible-desde.sql`, `migracion-pedido-urgencia.sql`, `migracion-cancelar-pedido.sql` y `migracion-resena.sql`, cada una con su razonamiento.
 
 ## Conexión con lo ya construido
 
-- **Pantalla 2** reutiliza `PropietarioDirectorio.tsx`: hoy filtra por "Solo verificados" y no tiene filtro por barrio, ni buscador por nombre. También hay que cambiar el propósito del botón — hoy es "Contactar" directo (abre `ContactarModal`), y pasaría a ser "Seleccionar para pedir presupuesto" con selección múltiple.
-- **Pantalla 3** es una ampliación de la tarjeta que ya existe en el listado — pantalla nueva, pero reutiliza los mismos datos (`verificacion.ts`, vista `prestador_directorio`).
-- **Pantalla 5** se apoya en `trabajo` (ya tiene `monto`, `metodo_pago` — incluye `efectivo` y `transferencia` — `estado_pago`, `frecuencia`) y `valoracion` (ya soporta reseña multi-dimensión + fotos). El **cierre bilateral** necesita un ajuste: hoy `estado_trabajo` es `solicitado / confirmado / realizado / cancelado`, no distingue "cerrado por propietario" de "cerrado por jardinero" — falta definir cómo modelarlo (ver pendientes).
+- **Pantalla 2** es `PropietarioDirectorio.tsx`. Ya tiene el filtro por barrio, el buscador por nombre, los dos filtros y la selección múltiple.
+- **Pantalla 3** es `PerfilJardinero.tsx`.
+- **Pantalla 5** es `MisPresupuestos.tsx` — el archivo conserva el nombre viejo, la pantalla se llama "Mis pedidos". Se apoya en `pedido`, `solicitud` y `valoracion`; **no** usa `trabajo`, que sigue sin escribirse desde la app porque exige `lote_id`.
+- **La reseña** vive en `DejarResena.tsx`, accesible desde "Mis pedidos" o desde el link `?resena=<id>` que el jardinero le pasa al vecino por WhatsApp.
 
 ## Pendiente / a definir
 
-- Cómo modelar el cierre bilateral del trabajo (¿dos flags booleanos, uno por parte, que habilitan la reseña cuando ambos están en true? ¿o estados nuevos en `estado_trabajo`?).
-- Tabla o mecanismo para "proponer nuevo prestador" (el lead que surge en la pantalla 2).
-- Cómo se dispara y persiste la conversación de la pantalla 4 — ¿un único llamado con extracción, o multi-turno real? (ver `estrategia-piloto.md`, sección "Diseño del flujo de descubrimiento").
-- Login (Supabase Auth) — no incluido en este MVP todavía, pero deja definidos los campos a capturar: Nombre, mail, teléfono, barrio, lote.
+- **El flujo de IA de la pantalla 4** — el prototipo existe en `scripts/ia/`; falta decidir dónde vive la clave de API (Supabase Edge Function vs. Netlify Function) y si es un llamado único con extracción o multi-turno.
+- **Login (Supabase Auth)** — habilita la pantalla 6, el historial por lote y reactivar el RLS.
+- **El cierre del trabajo y la tabla `trabajo`** — hoy la app no registra que un trabajo se hizo. Es Fase 2, junto con el pago digital: ahí sí hay un hecho concreto que registrar, y `trabajo.lote_id` deja de ser un obstáculo porque habrá login.
+- **Historial de la propiedad** — qué se hizo, cuándo y quién. Depende de las dos anteriores.
 
 ---
 

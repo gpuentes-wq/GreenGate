@@ -6,6 +6,8 @@ Documento de referencia sobre cómo validar el interés de los 3 tipos de usuari
 
 **No se entrega acceso al MVP hasta validar interés real.** El piloto primero mide interés (respuestas, disposición a usarlo) y recién a quien muestre interés genuino se lo invita a probar la app.
 
+> **Estado (sep 2026):** el principio se respeta. La landing junta interés con su propio formulario y **no enlaza a la app**. Si en algún momento se decide abrir el acceso desde la landing —para que cualquiera pruebe sin pasar por el filtro—, es un cambio de estrategia consciente, no un detalle de implementación: cambia qué mide el experimento (pasa de "interés declarado" a "uso exploratorio") y expone una base sin RLS a quien tenga el link.
+
 ## Insight clave que define el orden
 
 El propietario es, muchas veces, quien empuja a la administración a incorporar servicios nuevos. Su opinión pesa mucho en la decisión de la administración. Por eso el piloto no arranca por la administración en frío, sino por los propietarios — y se usa su interés como palanca.
@@ -29,6 +31,14 @@ El propietario es, muchas veces, quien empuja a la administración a incorporar 
 | **Jardineros** | WhatsApp directo o en persona | Es el canal natural de este segmento, orientado al boca a boca |
 
 ## Seguimiento del experimento
+
+**El formulario de la landing ya recoge parte de esto.** Desde septiembre la landing tiene su propio formulario (Netlify Forms, respuestas en el panel de Netlify → Forms → `interesados`), que pide: rol —vecino / jardinero / administración—, nombre, email, teléfono, barrio y un campo abierto de comentario. Reemplazó al formulario de Google.
+
+Lo que el formulario **no** captura y hay que seguir anotando aparte:
+
+- Canal usado y fecha de contacto.
+- Nivel de interés (alto / medio / bajo).
+- Si es propietario: **¿tiene llegada a la administración?** — el criterio de priorización del punto 2.
 
 Llevar una planilla simple con:
 - Nombre
@@ -54,6 +64,12 @@ El riesgo central de cualquier marketplace de dos lados: una vez que propietario
 
 ### Propuesta: cotización asistida por IA (el "gancho" de entrada)
 
+> **Estado (sep 2026): no construida, y una parte quedó sin sentido.** El prototipo vive en `scripts/ia/` y no está conectado — falta decidir dónde vive la clave de API en producción (Supabase Edge Function vs. Netlify Function).
+>
+> Más importante: **la mitad del lado del jardinero se cayó con el cambio de diseño.** Se había pensado que él respondiera con un precio y que la IA lo estructurara en una cotización comparable. No se sostiene: un jardinero no puede cotizar un jardín que no vio, así que el número era una adivinanza o un precio inflado para cubrirse. Hoy responde **desde cuándo puede ir**, con dos líneas de aclaración — eso no necesita extracción.
+>
+> Lo que sigue en pie es la mitad del propietario: estructurar una necesidad contada con palabras y fotos. Ahí la IA todavía agrega valor.
+
 Idea original: usar un LLM para levantar la información del pedido del propietario (descripción + fotos de lo que necesita) y transmitírsela estructurada al jardinero, para que arme un presupuesto más rápido — optimizando el ida y vuelta que hoy pasa por WhatsApp.
 
 - Se plantea como **gancho de entrada**, no como automatización de toda la negociación: la IA estructura el pedido y lo entrega armado al jardinero, que cotiza *dentro* de la app. No se plantea que la IA negocie sola desde el arranque — es mucho desarrollo para un MVP y no es necesario para dar valor real.
@@ -70,6 +86,8 @@ Idea original: usar un LLM para levantar la información del pedido del propieta
 - **Catálogo de especialidades como upsell de descubrimiento.** Si el perfil del jardinero muestra todas sus especialidades (corte, poda, riego, diseño), el propietario puede pedir varios servicios juntos desde el primer contacto, en vez de descubrirlos recién en una conversación separada más adelante. Esto funciona mejor *antes* del primer contacto directo — una vez que propietario y jardinero ya se conocen y tienen el teléfono del otro, un pedido adicional puede negociarse igual de fácil por WhatsApp, así que el valor real está en la etapa de descubrimiento, no en retener a un cliente que ya se tiene.
 
 ### Extensión: pedido en paralelo a varios jardineros + comparación asistida
+
+> **Estado (sep 2026): construida, sin IA.** El pedido en paralelo funciona —un `pedido` a N jardineros, comparación en "Mis pedidos", elección explícita y baja— pero **la comparación no es por precio ni la arma la IA**: se ordena por quién puede ir antes, con el puntaje al lado. El argumento de retención de abajo sigue valiendo igual, y quizás más: coordinar tres visitas por tres chats de WhatsApp es peor que comparar tres precios.
 
 Si el propietario ve 3 jardineros habilitados en su barrio, la IA arma el mismo pedido estructurado y lo manda en paralelo a los 3. Cuando llegan las respuestas, arma un comparativo.
 
@@ -88,6 +106,14 @@ Si el propietario ve 3 jardineros habilitados en su barrio, la IA arma el mismo 
 El paso 2 y 3 reutilizan una pantalla que ya está construida (el directorio de propietario), solo cambiándole el propósito de "Contactar" a "Elegir para pedir presupuesto" + agregando el botón de "Proponer prestador" — es una extensión, no algo nuevo desde cero.
 
 ### Diferencial: servicio de urgencia
+
+> **Estado (sep 2026): construido, con dos decisiones distintas a las de abajo.**
+>
+> **No es disponibilidad en tiempo real, es una disposición permanente.** `prestador.disponible_urgencia` dice "atiendo urgencias", no "estoy libre ahora", y **no caduca**. Un reset diario garantizaría el error caro: olvidarse de apagarlo cuesta un llamado que se rechaza, olvidarse de prenderlo cuesta trabajo perdido y es invisible. El interruptor viviría apagado y la oferta de urgencias se secaría. La disponibilidad real se confirma en cada pedido, con la fecha.
+>
+> **La urgencia informa, no rutea.** El pedido marcado como urgente le llega igual a todos los jardineros que el vecino eligió, tengan o no la marca — si alguno no atiende urgencias, el modal se lo avisa antes de enviar. Filtrar de entrada le sacaría al jardinero la decisión de tomar *esa* urgencia, que puede querer tomar porque conoce al vecino o tiene la semana floja.
+>
+> Tampoco se limitó a prestadores con vara de calificación más alta, como sugiere el punto de abajo: el vecino ve el puntaje de cada uno y decide.
 
 Propuesta: en la pantalla de propietarios, poder pedir un servicio de urgencia (ej. "no vino mi jardinero habitual") y acceder rápido a prestadores dispuestos a responder de inmediato. Es un momento donde el valor de estar en la plataforma se nota más que nunca: en una urgencia nadie quiere comparar presupuestos con calma, quiere ver ya quién está disponible ahora — algo que preguntar entre contactos por WhatsApp no resuelve tan rápido.
 
