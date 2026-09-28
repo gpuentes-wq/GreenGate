@@ -13,18 +13,23 @@ const SERVICIO_PRINCIPAL = 'jardineria'
 // el jardinero entra después solo a completar/validar su documentación.
 export function AltaPrestadorModal({
   barrioId,
+  inicial,
   onClose,
   onCreado,
 }: {
   barrioId: string
+  // Datos con los que arranca el formulario. Se usa cuando el alta sale de una
+  // sugerencia de un vecino: lo que escribió va precargado y la administración
+  // corrige lo que haga falta, en vez de retipearlo mirando la fila de al lado.
+  inicial?: { nombre?: string; apellido?: string; celular?: string }
   onClose: () => void
-  onCreado: () => void
+  onCreado: (prestadorId: string) => void
 }) {
   const [esEmpresa, setEsEmpresa] = useState(false)
-  const [nombre, setNombre] = useState('')
-  const [apellido, setApellido] = useState('')
+  const [nombre, setNombre] = useState(inicial?.nombre ?? '')
+  const [apellido, setApellido] = useState(inicial?.apellido ?? '')
   const [razonSocial, setRazonSocial] = useState('')
-  const [celular, setCelular] = useState('')
+  const [celular, setCelular] = useState(inicial?.celular ?? '')
   const [documento, setDocumento] = useState('')
   const [condicion, setCondicion] = useState('')
   const [guardando, setGuardando] = useState(false)
@@ -89,7 +94,7 @@ export function AltaPrestadorModal({
     ])
 
     setGuardando(false)
-    onCreado()
+    onCreado(prestadorId)
   }
 
   return (

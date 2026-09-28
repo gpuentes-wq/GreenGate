@@ -17,6 +17,21 @@ type PrestadorBarrioRow = { prestador_id: string; barrio_id: string; habilitado:
 type Verif = VerificacionRow & { id: string; prestador_id: string }
 type IntegranteConNombre = IntegranteRow & { prestador_id: string; nombre: string; apellido: string | null }
 type Alerta = { id: string; prestador_id: string; nombre: string; tipo: string; texto: string; vencido: boolean }
+type Sugerido = {
+  id: string
+  barrio_id: string | null
+  estado: string
+  nombre_sugerido: string
+  contacto_sugerido: string | null
+  notas: string | null
+  propietario_contacto_nombre: string | null
+  propietario_contacto_celular: string | null
+  created_at: string
+}
+// Qué alta está en curso. `sugeridoId` es null cuando la administración usa el
+// botón "+ Agregar prestador" y no viene de una sugerencia; cuando viene, al
+// crear el prestador hay que cerrar el lead que lo originó.
+type AltaEnCurso = { sugeridoId: string | null; inicial?: { nombre?: string; apellido?: string; celular?: string } }
 
 export function AdminBarrioPanel({ onVerMultibarrio }: { onVerMultibarrio?: () => void }) {
   const [barrios, setBarrios] = useState<BarrioOpt[]>([])
@@ -26,22 +41,34 @@ export function AdminBarrioPanel({ onVerMultibarrio }: { onVerMultibarrio?: () =
   const [verificaciones, setVerificaciones] = useState<Verif[]>([])
   const [integrantes, setIntegrantes] = useState<IntegranteConNombre[]>([])
   const [administracionId, setAdministracionId] = useState<string | null>(null)
+  const [sugeridos, setSugeridos] = useState<Sugerido[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [modalAlta, setModalAlta] = useState(false)
+  const [alta, setAlta] = useState<AltaEnCurso | null>(null)
   const [validar, setValidar] = useState<{ id: string; nombre: string } | null>(null)
+  // Qué sugerencia está pidiendo confirmación para descartarse. Se confirma en
+  // la misma pantalla, por el mismo motivo que la baja de un pedido: un
+  // confirm() del navegador se descarta sin leer.
+  const [descartando, setDescartando] = useState<string | null>(null)
 
   const cargar = useCallback(async () => {
     setError(null)
-    const [b, pb, p, a, v, i] = await Promise.all([
+    const [b, pb, p, a, v, i, s] = await Promise.all([
       supabase.from('barrio').select('id,nombre').order('nombre'),
       supabase.from('prestador_barrio').select('prestador_id,barrio_id,habilitado'),
       supabase.from('prestador_directorio').select('*').order('puntaje_promedio', { ascending: false, nullsFirst: false }),
       supabase.from('administracion').select('id').limit(1),
       supabase.from('verificacion').select('id,tipo,estado,fecha_vencimiento,prestador_id,integrante_id'),
       supabase.from('integrante').select('id,prestador_id,nombre,apellido,activo'),
+      supabase
+        .from('prestador_sugerido')
+        .select(
+          'id,barrio_id,estado,nombre_sugerido,contacto_sugerido,notas,propietario_contacto_nombre,propietario_contacto_celular,created_at',
+        )
+        .eq('estado', 'pendiente')
+        .order('created_at', { ascending: false }),
     ])
-    const err = b.error || pb.error || p.error || v.error || i.error
+    const err = b.error || pb.error || p.error || v.error || i.error || s.error
     if (err) {
       setError(err.message)
       return
@@ -52,6 +79,7 @@ export function AdminBarrioPanel({ onVerMultibarrio }: { onVerMultibarrio?: () =
     setPrestadores((p.data as PrestadorDirectorio[]) ?? [])
     setVerificaciones((v.data as Verif[]) ?? [])
     setIntegrantes((i.data as IntegranteConNombre[]) ?? [])
+    setSugeridos((s.data as Sugerido[]) ?? [])
     const adm = (a.data as Array<{ id: string }>) ?? []
     if (adm.length > 0) setAdministracionId(adm[0].id)
     setBarrioId((actual) => actual || (bData.length === 1 ? bData[0].id : ''))
@@ -75,6 +103,33 @@ export function AdminBarrioPanel({ onVerMultibarrio }: { onVerMultibarrio?: () =
       .update({ habilitado })
       .eq('prestador_id', prestadorId)
       .eq('barrio_id', barrioId)
+    if (error) setError(error.message)
+  }
+
+  // Descartar no borra la fila: la marca. Que un vecino haya recomendado a
+  // alguien es información que conviene conservar aunque la administración
+  // decida no darlo de alta — si tres vecinos distintos proponen al mismo,
+  // eso dice algo.
+  async function descartar(sugeridoId: string) {
+    setSugeridos((rows) => rows.filter((r) => r.id !== sugeridoId))
+    setDescartando(null)
+    const { error } = await supabase
+      .from('prestador_sugerido')
+      .update({ estado: 'descartado', resuelto_en: new Date().toISOString() })
+      .eq('id', sugeridoId)
+    if (error) {
+      setError(error.message)
+      cargar()
+    }
+  }
+
+  // Se llama cuando el alta salió de una sugerencia: cierra el lead y lo deja
+  // apuntando al prestador que originó, para que quede el rastro completo.
+  async function marcarDadoDeAlta(sugeridoId: string, prestadorId: string) {
+    const { error } = await supabase
+      .from('prestador_sugerido')
+      .update({ estado: 'dado_de_alta', prestador_id: prestadorId, resuelto_en: new Date().toISOString() })
+      .eq('id', sugeridoId)
     if (error) setError(error.message)
   }
 
@@ -139,6 +194,20 @@ export function AdminBarrioPanel({ onVerMultibarrio }: { onVerMultibarrio?: () =
     }
     return out.sort((a, b) => Number(b.vencido) - Number(a.vencido))
   }, [verificaciones, lista, integrantes, idsEnBarrio])
+
+  // Sugerencias pendientes de este barrio, con un aviso cuando el nombre se
+  // parece al de alguien que ya está en el directorio. Es el caso más común de
+  // lead inútil: el vecino no encontró a su jardinero porque buscó mal, no
+  // porque falte. Sin el aviso, la administración lo da de alta dos veces.
+  const sugeridosDelBarrio = useMemo(() => {
+    const yaEstan = lista.map((p) => normalizar(nombreMostrar(p)))
+    return sugeridos
+      .filter((s) => s.barrio_id === barrioId)
+      .map((s) => {
+        const n = normalizar(s.nombre_sugerido)
+        return { ...s, posibleDuplicado: n.length > 2 && yaEstan.some((y) => y.includes(n) || n.includes(y)) }
+      })
+  }, [sugeridos, barrioId, lista])
 
   if (loading) {
     return (
@@ -234,11 +303,94 @@ export function AdminBarrioPanel({ onVerMultibarrio }: { onVerMultibarrio?: () =
             </section>
           )}
 
+          {/* En verde y no en ámbar a propósito: el ámbar de arriba significa
+              "algo está por romperse". Esto es una recomendación de un vecino,
+              que es buena noticia aunque pida una acción. */}
+          {sugeridosDelBarrio.length > 0 && (
+            <section className="mb-8 rounded-lg border border-green-300 bg-green-50 p-4">
+              <h2 className="text-sm font-semibold text-green-800">
+                🌱 Propuestos por vecinos ({sugeridosDelBarrio.length})
+              </h2>
+              <p className="mb-3 mt-1 text-xs text-green-700">
+                Vecinos del barrio recomendaron a estas personas. Todavía no están en el directorio.
+              </p>
+              <ul className="space-y-2">
+                {sugeridosDelBarrio.map((s) => (
+                  <li key={s.id} className="rounded-lg border border-green-200 bg-white p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-800">
+                          {s.nombre_sugerido}
+                          {s.contacto_sugerido && (
+                            <span className="ml-2 text-sm font-normal text-gray-500">{s.contacto_sugerido}</span>
+                          )}
+                        </p>
+                        {s.posibleDuplicado && (
+                          <p className="mt-1 text-xs font-medium text-amber-700">
+                            ⚠️ Ya hay un prestador con un nombre parecido en este barrio. Fijate antes de darlo de alta.
+                          </p>
+                        )}
+                        {s.notas && <p className="mt-1 text-sm italic text-gray-600">“{s.notas}”</p>}
+                        <p className="mt-1 text-xs text-gray-400">
+                          {s.propietario_contacto_nombre
+                            ? `Lo propuso ${s.propietario_contacto_nombre}`
+                            : 'Lo propuso un vecino'}
+                          {s.propietario_contacto_celular && ` · ${s.propietario_contacto_celular}`}
+                          {` · ${fechaCorta(s.created_at)}`}
+                        </p>
+                      </div>
+                      {descartando === s.id ? (
+                        <div className="flex shrink-0 items-center gap-2">
+                          <span className="text-xs text-gray-500">¿Descartar?</span>
+                          <button
+                            onClick={() => descartar(s.id)}
+                            className="rounded-lg border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+                          >
+                            Sí, descartar
+                          </button>
+                          <button
+                            onClick={() => setDescartando(null)}
+                            className="text-xs text-gray-500 hover:underline"
+                          >
+                            No
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex shrink-0 items-center gap-2">
+                          <button
+                            onClick={() =>
+                              setAlta({
+                                sugeridoId: s.id,
+                                inicial: {
+                                  ...partirNombre(s.nombre_sugerido),
+                                  celular: s.contacto_sugerido ?? '',
+                                },
+                              })
+                            }
+                            className="rounded-lg bg-gg-green px-3 py-1.5 text-xs font-medium text-white hover:bg-gg-dark"
+                          >
+                            Dar de alta
+                          </button>
+                          <button
+                            onClick={() => setDescartando(s.id)}
+                            className="text-xs text-gray-500 hover:underline"
+                          >
+                            Descartar
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           <section>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-semibold text-gg-dark">Prestadores del barrio</h2>
               <button
-                onClick={() => setModalAlta(true)}
+                onClick={() => setAlta({ sugeridoId: null })}
                 className="rounded-lg bg-gg-green px-4 py-2 text-sm font-medium text-white hover:bg-gg-dark"
               >
                 + Agregar prestador
@@ -315,12 +467,14 @@ export function AdminBarrioPanel({ onVerMultibarrio }: { onVerMultibarrio?: () =
         </>
       )}
 
-      {modalAlta && barrioId && (
+      {alta && barrioId && (
         <AltaPrestadorModal
           barrioId={barrioId}
-          onClose={() => setModalAlta(false)}
-          onCreado={() => {
-            setModalAlta(false)
+          inicial={alta.inicial}
+          onClose={() => setAlta(null)}
+          onCreado={async (prestadorId) => {
+            if (alta.sugeridoId) await marcarDadoDeAlta(alta.sugeridoId, prestadorId)
+            setAlta(null)
             cargar()
           }}
         />
@@ -342,4 +496,27 @@ export function AdminBarrioPanel({ onVerMultibarrio }: { onVerMultibarrio?: () =
 function nombreMostrar(p: PrestadorDirectorio): string {
   if (p.es_empresa && p.razon_social) return p.razon_social
   return p.apellido ? `${p.nombre} ${p.apellido}` : p.nombre
+}
+
+// Sin acentos ni mayúsculas: el vecino escribe "Ramon Perez" y en el directorio
+// está "Ramón Pérez". Comparar tal cual no encontraría nunca el duplicado.
+function normalizar(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// El vecino escribe un nombre suelto; el alta pide nombre y apellido por
+// separado. La primera palabra es el nombre y el resto el apellido: acierta en
+// la mayoría de los casos y, cuando no, la administración lo corrige ahí mismo.
+function partirNombre(completo: string): { nombre: string; apellido: string } {
+  const partes = completo.trim().split(/\s+/)
+  return { nombre: partes[0] ?? '', apellido: partes.slice(1).join(' ') }
+}
+
+function fechaCorta(iso: string): string {
+  return new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
 }
