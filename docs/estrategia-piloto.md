@@ -6,7 +6,7 @@ Documento de referencia sobre cómo validar el interés de los 3 tipos de usuari
 
 **No se entrega acceso al MVP hasta validar interés real.** El piloto primero mide interés (respuestas, disposición a usarlo) y recién a quien muestre interés genuino se lo invita a probar la app.
 
-> **Estado (sep 2026):** el principio se respeta. La landing junta interés con su propio formulario y **no enlaza a la app**. Si en algún momento se decide abrir el acceso desde la landing —para que cualquiera pruebe sin pasar por el filtro—, es un cambio de estrategia consciente, no un detalle de implementación: cambia qué mide el experimento (pasa de "interés declarado" a "uso exploratorio") y expone una base sin RLS a quien tenga el link.
+> **Estado (sep 2026):** el principio se respeta. La landing junta interés con su propio formulario y **no enlaza a la app**. Si en algún momento se decide abrir el acceso desde la landing —para que cualquiera pruebe sin pasar por el filtro—, es un cambio de estrategia consciente, no un detalle de implementación: cambia qué mide el experimento (pasa de "interés declarado" a "uso exploratorio"). El riesgo técnico de esa apertura bajó: el RLS quedó activado y el borrado cerrado (`supabase/rls-piloto.sql`), así que quien tenga el link ya no puede destruir datos. Sigue pudiendo leerlos y crear filas, que es aceptable con datos ficticios.
 
 ## Insight clave que define el orden
 

@@ -85,7 +85,7 @@ Todavía no hay Auth, así que cada rol se identifica de una forma distinta y pr
 - **Jardinero y administración:** eligen su perfil de una lista al entrar. Cualquiera puede elegir cualquiera — es deliberado, para poder recorrer el producto entero sin credenciales.
 - **Reseña:** el link `?resena=<id de la solicitud>` funciona como credencial de un solo uso; quien lo tiene puede dejar esa reseña, y solo esa.
 
-Las tres desaparecen cuando entre Supabase Auth, y son la razón por la que el RLS sigue apagado.
+Las tres desaparecen cuando entre Supabase Auth, y son la razón por la que el RLS sigue siendo permisivo.
 
 ## Configuración y claves
 
@@ -97,10 +97,12 @@ En desarrollo local viven en un archivo `.env` (ignorado por Git). En producció
 
 ## Seguridad — estado actual (piloto)
 
-- 🔓 **RLS (Row Level Security) desactivado.** En modo piloto, sin login, la base está abierta a quien tenga el link (puede leer y escribir). Es aceptable **únicamente porque los datos actuales son ficticios/de ejemplo**.
-- 📄 **`supabase/policies.sql`** ya contiene el borrador de las políticas de seguridad por barrio/rol, listas para activar cuando se sume el login.
+- 🔒 **RLS activado en las 17 tablas** (`supabase/rls-piloto.sql`, septiembre 2026). Sin login no hay a quién atribuirle una fila, así que **select, insert y update siguen abiertos**; lo que se cerró es el **borrado**, que es el daño irreversible. Ninguna tabla admite `delete` desde el navegador salvo `prestador_servicio`, que lo necesita porque el jardinero reescribe sus especialidades al editar el perfil.
+- 🛡️ **Los puntajes publicados son inmutables.** En `valoracion` el permiso de update está acotado **por columna** a `respuesta_prestador`: el jardinero puede responder una reseña, pero `puntaje` y `comentario` no se pueden modificar ni borrar desde afuera. Es el activo que hace creíble al directorio y por eso tiene su propio candado.
+- ⚠️ **Lo que esto no resuelve.** Cualquiera con el link todavía puede leer toda la base y crear o modificar filas. Es aceptable mientras los datos sean ficticios; **no lo es para datos reales**, y ese límite lo levanta el login.
+- 📄 **`supabase/policies.sql`** contiene el borrador de las políticas por barrio/rol, que reemplazan a las permisivas cuando se sume Supabase Auth.
 - ⚖️ **Datos sensibles.** Las verificaciones guardan **solo el estado** (verificado / vencido / etc.) y las fechas, **nunca el documento** (antecedentes penales, póliza). Es una decisión de diseño por la **Ley 25.326** de Protección de Datos Personales de Argentina.
-- 🔑 La *clave anon* es pública por diseño (va en el frontend); lo que protege los datos es el RLS, hoy apagado a propósito para el piloto.
+- 🔑 La *clave anon* es pública por diseño (va en el frontend, la descarga cualquiera que abra la app). Por eso la seguridad no puede apoyarse en esconderla: tiene que estar en la base, que es lo que hace el RLS.
 
 ## Costos y limitaciones
 
@@ -117,9 +119,10 @@ greengate/
 ├── supabase/
 │   ├── schema.sql          Esquema base (15 tablas + vista)
 │   ├── seed.sql            Datos de ejemplo (barrios de zona norte)
-│   ├── migracion-*.sql     14 migraciones, en orden cronológico
+│   ├── migracion-*.sql     15 migraciones, en orden cronológico
 │   ├── preparar-demo.sql   Limpia lo transaccional antes de mostrar la app
-│   ├── rls-dev.sql         Desactiva RLS para el piloto
+│   ├── rls-piloto.sql      RLS activado: cierra el borrado (vigente)
+│   ├── rls-dev.sql         Desactivaba RLS por completo — OBSOLETO
 │   └── policies.sql        Políticas de seguridad (borrador, para el login)
 ├── docs/                   11 documentos: arquitectura, modelo de datos,
 │                           specs por rol, cobertura y guía de revisión
@@ -130,7 +133,7 @@ greengate/
 
 ## Roadmap arquitectónico (lo que falta)
 
-1. **Login (Supabase Auth) + reactivar RLS.** Es el paso que habilita operar con **datos reales**: cada usuario entra con su rol (administración / propietario / prestador) y solo ve/edita lo que le corresponde.
+1. **Login (Supabase Auth) + políticas por rol.** Es el paso que habilita operar con **datos reales**: cada usuario entra con su rol (administración / propietario / prestador) y solo ve/edita lo que le corresponde. El RLS ya está activado (`rls-piloto.sql`) pero con políticas permisivas; lo que falta es reemplazarlas por las de `policies.sql`, que necesitan una identidad para evaluar.
 2. **Fase 2:** integración con el sistema de control de accesos del barrio (trazabilidad de ingresos), cobro digital (MercadoPago) y agenda con optimización de rutas.
 
 ## Accesos

@@ -22,6 +22,7 @@ greengate/
 ├── supabase/
 │   ├── schema.sql      ← el modelo de datos (las 9 entidades)
 │   ├── seed.sql        ← datos de ejemplo para ver el directorio
+│   ├── rls-piloto.sql  ← seguridad vigente: RLS activado, borrado cerrado
 │   └── policies.sql    ← seguridad por barrio (RLS) — borrador, se aplica con el login
 ├── docs/
 │   └── modelo-de-datos.md  ← el modelo explicado sin tecnicismos
@@ -71,7 +72,8 @@ npm run dev
 ## Seguridad y datos personales
 
 - Los **antecedentes penales** son un **dato sensible** (Ley 25.326). Por diseño guardamos **solo el estado de verificación**, nunca el documento.
-- La seguridad por barrio (cada administración ve solo lo suyo) se implementa con **RLS** ([`supabase/policies.sql`](supabase/policies.sql)). Se aplica y prueba **antes** de cargar datos reales o publicar.
+- El **RLS está activado** en las 17 tablas ([`supabase/rls-piloto.sql`](supabase/rls-piloto.sql)): nadie puede borrar filas desde el navegador, y los puntajes publicados son inmutables. Las políticas siguen siendo permisivas para lectura y escritura porque todavía no hay login.
+- La seguridad por barrio (cada administración ve solo lo suyo) se implementa con las políticas por rol de [`supabase/policies.sql`](supabase/policies.sql). Se aplica y prueba **antes** de cargar datos reales.
 - La **anon key** de Supabase puede ir en el frontend; la **service_role key** NUNCA va al frontend ni al repo.
 
 ## Roadmap
