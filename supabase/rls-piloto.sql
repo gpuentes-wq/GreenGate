@@ -110,6 +110,7 @@ create policy pil_upd_valoracion on valoracion
 -- prestador_directorio es una vista, no una tabla: RLS no se le aplica y
 -- corre con los permisos de su dueño. El grant es defensivo — si se
 -- perdiera, el directorio del propietario quedaría vacío sin error visible.
+revoke all on prestador_directorio from anon, authenticated;
 grant select on prestador_directorio to anon, authenticated;
 
 
