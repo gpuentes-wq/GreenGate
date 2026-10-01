@@ -138,6 +138,27 @@ select column_name
   from information_schema.column_privileges
  where grantee = 'anon' and table_name = 'valoracion' and privilege_type = 'UPDATE';
 
+-- ════════════════════════════════════════════════════════════════════════
+-- PASO 7 · Storage: limpieza defensiva, no por exposición real
+-- ════════════════════════════════════════════════════════════════════════
+-- Una auditoría encontró que anon tenía insert/update/delete/truncate
+-- sobre storage.buckets, storage.buckets_analytics y storage.objects.
+-- Se confirmó en Settings → Data API → Exposed schemas que `storage` NO
+-- está expuesto por la API REST: este permiso no era alcanzable desde el
+-- navegador con la clave anon. No era una puerta abierta real.
+--
+-- Se revoca de todos modos, por higiene: si alguien expone `storage` en
+-- esa lista más adelante (por ejemplo al implementar subida real de
+-- fotos, hoy inexistente — la app no usa storage.from() ni .upload() en
+-- ningún componente), que empiece desde permisos mínimos y no herede
+-- esto sin darse cuenta.
+revoke insert, update, delete, truncate, references, trigger
+  on storage.buckets from anon;
+revoke insert, update, delete, truncate, references, trigger
+  on storage.buckets_analytics from anon;
+revoke insert, update, delete, truncate, references, trigger
+  on storage.objects from anon;
+
 
 -- ════════════════════════════════════════════════════════════════════════
 -- NOTA · Cómo volver atrás
