@@ -91,6 +91,24 @@ export function Tarjeta({
   )
 }
 
+// Pestaña de navegación dentro de una pantalla. Vive acá y no en el archivo
+// de un rol porque la usan el jardinero y el propietario: si cada uno tuviera
+// su copia, la navegación se vería distinta según quién entra.
+export function SubTab({ activo, onClick, children }: { activo: boolean; onClick: () => void; children: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        '-mb-px border-b-2 px-4 py-2 text-sm font-medium transition ' +
+        (activo ? 'border-gg-green text-gg-dark' : 'border-transparent text-gray-500 hover:text-gray-700')
+      }
+    >
+      {children}
+    </button>
+  )
+}
+
 export function Modal({ titulo, onClose, children }: { titulo: string; onClose: () => void; children: ReactNode }) {
   return (
     <div

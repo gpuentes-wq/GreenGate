@@ -2,12 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './lib/supabase'
 import type { PrestadorDirectorio, Especialidad } from './types'
 import { servicioLabel } from './labels'
-import { Insignia, EmptyState } from './ui'
+import { Insignia, EmptyState, SubTab } from './ui'
 import { PedirPresupuestoModal } from './PedirPresupuestoModal'
 import { ProponerPrestadorModal } from './ProponerPrestadorModal'
 import { PerfilJardinero } from './PerfilJardinero'
 import { MisPresupuestos } from './MisPresupuestos'
-import { misPedidos } from './misPedidos'
 import { badgesPrestador, prestadorVerificado, type VerificacionRow, type IntegranteRow } from './verificacion'
 
 type Extra = { tarifa: number | null; experiencia: number | null }
@@ -20,9 +19,6 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
   const [vista, setVista] = useState<
     { tipo: 'listado' } | { tipo: 'perfil'; prestadorId: string } | { tipo: 'presupuestos' }
   >({ tipo: 'listado' })
-  // El acceso a "Mis pedidos" solo aparece si este navegador pidió alguno:
-  // sin login, no hay nada que mostrarle a quien entra por primera vez.
-  const [hayPedidos, setHayPedidos] = useState(() => misPedidos().length > 0)
 
   const [barrios, setBarrios] = useState<BarrioOpt[]>([])
   const [barrioId, setBarrioId] = useState(barrioInicial)
@@ -137,8 +133,33 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
     return <PerfilJardinero prestadorId={vista.prestadorId} onVolver={() => setVista({ tipo: 'listado' })} />
   }
 
+  // Las pestañas son las mismas que ve el jardinero (mismo componente SubTab).
+  // El ancho acompaña al contenido de cada una —el directorio es una grilla de
+  // tres columnas, los pedidos una lista angosta— o la barra quedaría flotando
+  // más ancha que lo que separa.
+  const pestanas = (
+    <div className={'mx-auto px-6 pt-8 ' + (vista.tipo === 'presupuestos' ? 'max-w-3xl' : 'max-w-6xl')}>
+      <div className="flex gap-1 border-b border-gray-200">
+        <SubTab activo={vista.tipo === 'listado'} onClick={() => setVista({ tipo: 'listado' })}>
+          Directorio
+        </SubTab>
+        {/* Siempre visible, también sin pedidos: esconder la pestaña dejaba al
+            propietario sin saber que la pantalla existe hasta pedir la primera
+            visita. MisPresupuestos ya resuelve su propio estado vacío. */}
+        <SubTab activo={vista.tipo === 'presupuestos'} onClick={() => setVista({ tipo: 'presupuestos' })}>
+          Mis pedidos
+        </SubTab>
+      </div>
+    </div>
+  )
+
   if (vista.tipo === 'presupuestos') {
-    return <MisPresupuestos barrioId={barrioId} onVolver={() => setVista({ tipo: 'listado' })} />
+    return (
+      <>
+        {pestanas}
+        <MisPresupuestos barrioId={barrioId} />
+      </>
+    )
   }
 
   // Se pasa disponible_urgencia para que el modal pueda avisar si el pedido se
@@ -148,234 +169,223 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
     .map((p) => ({ id: p.id, nombre: nombreDe(p), disponible_urgencia: p.disponible_urgencia }))
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-8 pb-24">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-gg-dark">Encontrá tu jardinero</h1>
-          <p className="mb-6 text-sm text-gray-500">
-            Jardineros verificados por la administración de tu barrio. Compará puntaje, especialidad y precio.
-          </p>
-        </div>
-        {hayPedidos && (
-          <button
-            type="button"
-            onClick={() => setVista({ tipo: 'presupuestos' })}
-            className="text-sm font-medium text-gg-green hover:underline"
-          >
-            Mis pedidos →
-          </button>
-        )}
-      </div>
+    <>
+      {pestanas}
+      <main className="mx-auto max-w-6xl px-6 pt-6 pb-24">
+        <h1 className="text-xl font-semibold text-gg-dark">Encontrá tu jardinero</h1>
+        <p className="mb-6 text-sm text-gray-500">
+          Jardineros verificados por la administración de tu barrio. Compará puntaje, especialidad y precio.
+        </p>
 
-      <div className="mb-6 flex flex-wrap items-center gap-4">
-        <label className="flex items-center gap-2 text-sm text-gray-600">
-          Tu barrio
-          <select
-            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-            value={barrioId}
-            onChange={(e) => setBarrioId(e.target.value)}
-          >
-            <option value="">Elegí un barrio…</option>
-            {barrios.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.nombre}
-              </option>
-            ))}
-          </select>
-        </label>
-        {barrioId && (
-          <>
-            <input
-              type="text"
-              placeholder="Buscar por nombre…"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
-            />
-            <label className="flex items-center gap-2 text-sm text-gray-600">
+        <div className="mb-6 flex flex-wrap items-center gap-4">
+          <label className="flex items-center gap-2 text-sm text-gray-600">
+            Tu barrio
+            <select
+              className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+              value={barrioId}
+              onChange={(e) => setBarrioId(e.target.value)}
+            >
+              <option value="">Elegí un barrio…</option>
+              {barrios.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+          {barrioId && (
+            <>
               <input
-                type="checkbox"
-                checked={soloVerificados}
-                onChange={(e) => setSoloVerificados(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300"
+                type="text"
+                placeholder="Buscar por nombre…"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
               />
-              Solo verificados
-            </label>
-            <label className="flex items-center gap-2 text-sm text-gray-600">
-              <input
-                type="checkbox"
-                checked={soloUrgencias}
-                onChange={(e) => setSoloUrgencias(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300"
-              />
-              ⚡ Solo urgencias
-            </label>
-            <span className="text-sm text-gray-400">{lista.length} jardineros</span>
-          </>
-        )}
-      </div>
-
-      {error && (
-        <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-700">
-          No se pudieron cargar los datos: {error}
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={soloVerificados}
+                  onChange={(e) => setSoloVerificados(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                Solo verificados
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={soloUrgencias}
+                  onChange={(e) => setSoloUrgencias(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                ⚡ Solo urgencias
+              </label>
+              <span className="text-sm text-gray-400">{lista.length} jardineros</span>
+            </>
+          )}
         </div>
-      )}
 
-      {loading ? (
-        <p className="text-gray-500">Cargando…</p>
-      ) : !barrioId ? (
-        <EmptyState>Elegí tu barrio arriba para ver los jardineros disponibles.</EmptyState>
-      ) : lista.length === 0 ? (
-        <EmptyState>No hay jardineros que coincidan con el filtro.</EmptyState>
-      ) : (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {lista.map((p) => {
-            const nombre = nombreDe(p)
-            const badges = badgesPrestador(verifs[p.id] ?? [], integrantes[p.id] ?? [])
-            const verificado = badges.antecedentes && badges.seguro && badges.identidad
-            const esp = espPorPrestador[p.id] ?? []
-            const ex = extras[p.id]
-            const yaEnviado = enviados[p.id]
-            return (
-              <div key={p.id} className="flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setVista({ tipo: 'perfil', prestadorId: p.id })}
-                      className="font-semibold text-gray-900 hover:underline"
-                    >
-                      {nombre}
-                      {/* Mismo estilo y texto que la insignia del panel de administración. */}
-                      {p.disponible_urgencia && (
-                        <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                          ⚡ Urgencia
+        {error && (
+          <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-700">
+            No se pudieron cargar los datos: {error}
+          </div>
+        )}
+
+        {loading ? (
+          <p className="text-gray-500">Cargando…</p>
+        ) : !barrioId ? (
+          <EmptyState>Elegí tu barrio arriba para ver los jardineros disponibles.</EmptyState>
+        ) : lista.length === 0 ? (
+          <EmptyState>No hay jardineros que coincidan con el filtro.</EmptyState>
+        ) : (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {lista.map((p) => {
+              const nombre = nombreDe(p)
+              const badges = badgesPrestador(verifs[p.id] ?? [], integrantes[p.id] ?? [])
+              const verificado = badges.antecedentes && badges.seguro && badges.identidad
+              const esp = espPorPrestador[p.id] ?? []
+              const ex = extras[p.id]
+              const yaEnviado = enviados[p.id]
+              return (
+                <div key={p.id} className="flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setVista({ tipo: 'perfil', prestadorId: p.id })}
+                        className="font-semibold text-gray-900 hover:underline"
+                      >
+                        {nombre}
+                        {/* Mismo estilo y texto que la insignia del panel de administración. */}
+                        {p.disponible_urgencia && (
+                          <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                            ⚡ Urgencia
+                          </span>
+                        )}
+                      </button>
+                      <div className="text-sm text-gray-500">{servicioLabel(p.tipo_servicio_principal)}</div>
+                    </div>
+                    {verificado && (
+                      <span className="shrink-0 rounded-full bg-gg-light px-2 py-1 text-xs font-medium text-gg-dark">
+                        ✓ Verificado
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-2 flex items-center gap-1 text-sm">
+                    {p.puntaje_promedio != null ? (
+                      <>
+                        <span className="text-amber-500">★</span>
+                        <span className="font-medium">{p.puntaje_promedio}</span>
+                        <span className="text-gray-400">({p.cantidad_valoraciones} reseñas)</span>
+                      </>
+                    ) : (
+                      <span className="text-gray-400">Sin reseñas aún</span>
+                    )}
+                  </div>
+
+                  {p.descripcion && <p className="mt-3 text-sm text-gray-600">{p.descripcion}</p>}
+
+                  {esp.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {esp.map((t) => (
+                        <span key={t} className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                          {servicioLabel(t)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {ex && (ex.tarifa != null || ex.experiencia != null) && (
+                    <div className="mt-3 text-sm text-gray-700">
+                      {ex.tarifa != null && (
+                        <span>
+                          Desde <strong>ARS {ex.tarifa.toLocaleString('es-AR')}</strong> por mes
                         </span>
                       )}
-                    </button>
-                    <div className="text-sm text-gray-500">{servicioLabel(p.tipo_servicio_principal)}</div>
-                  </div>
-                  {verificado && (
-                    <span className="shrink-0 rounded-full bg-gg-light px-2 py-1 text-xs font-medium text-gg-dark">
-                      ✓ Verificado
-                    </span>
-                  )}
-                </div>
-
-                <div className="mt-2 flex items-center gap-1 text-sm">
-                  {p.puntaje_promedio != null ? (
-                    <>
-                      <span className="text-amber-500">★</span>
-                      <span className="font-medium">{p.puntaje_promedio}</span>
-                      <span className="text-gray-400">({p.cantidad_valoraciones} reseñas)</span>
-                    </>
-                  ) : (
-                    <span className="text-gray-400">Sin reseñas aún</span>
-                  )}
-                </div>
-
-                {p.descripcion && <p className="mt-3 text-sm text-gray-600">{p.descripcion}</p>}
-
-                {esp.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {esp.map((t) => (
-                      <span key={t} className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                        {servicioLabel(t)}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {ex && (ex.tarifa != null || ex.experiencia != null) && (
-                  <div className="mt-3 text-sm text-gray-700">
-                    {ex.tarifa != null && (
-                      <span>
-                        Desde <strong>ARS {ex.tarifa.toLocaleString('es-AR')}</strong> por mes
-                      </span>
-                    )}
-                    {ex.experiencia != null && (
-                      <span className="text-gray-400">
-                        {ex.tarifa != null ? ' · ' : ''}
-                        {ex.experiencia} años de experiencia
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                <div className="mt-3 flex flex-wrap gap-1">
-                  <Insignia ok={badges.antecedentes} label="Antecedentes" />
-                  <Insignia ok={badges.seguro} label="Seguro" />
-                  <Insignia ok={badges.identidad} label="Identidad" />
-                </div>
-
-                <div className="mt-4">
-                  {yaEnviado ? (
-                    <div className="rounded-lg bg-gg-light px-3 py-2 text-center text-sm font-medium text-gg-dark">
-                      Solicitud enviada ✓
+                      {ex.experiencia != null && (
+                        <span className="text-gray-400">
+                          {ex.tarifa != null ? ' · ' : ''}
+                          {ex.experiencia} años de experiencia
+                        </span>
+                      )}
                     </div>
-                  ) : (
-                    <label className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                      <input
-                        type="checkbox"
-                        checked={seleccionados.has(p.id)}
-                        onChange={() => toggleSeleccion(p.id)}
-                        className="h-4 w-4 rounded border-gray-300"
-                      />
-                      Seleccionar para pedir visita
-                    </label>
                   )}
+
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    <Insignia ok={badges.antecedentes} label="Antecedentes" />
+                    <Insignia ok={badges.seguro} label="Seguro" />
+                    <Insignia ok={badges.identidad} label="Identidad" />
+                  </div>
+
+                  <div className="mt-4">
+                    {yaEnviado ? (
+                      <div className="rounded-lg bg-gg-light px-3 py-2 text-center text-sm font-medium text-gg-dark">
+                        Solicitud enviada ✓
+                      </div>
+                    ) : (
+                      <label className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                        <input
+                          type="checkbox"
+                          checked={seleccionados.has(p.id)}
+                          onChange={() => toggleSeleccion(p.id)}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        Seleccionar para pedir visita
+                      </label>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {barrioId && (
-        <p className="mt-6 text-sm text-gray-500">
-          ¿No encontrás a quien buscás?{' '}
-          <button type="button" onClick={() => setModalProponer(true)} className="font-medium text-gg-green hover:underline">
-            Proponé un prestador
-          </button>
-        </p>
-      )}
-
-      {seleccionados.size > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white px-6 py-3 shadow-lg">
-          <div className="mx-auto flex max-w-6xl items-center justify-between">
-            <span className="text-sm text-gray-700">{seleccionados.size} seleccionado{seleccionados.size === 1 ? '' : 's'}</span>
-            <button
-              type="button"
-              onClick={() => setModalPresupuesto(true)}
-              className="rounded-lg bg-gg-green px-4 py-2 text-sm font-medium text-white hover:bg-gg-dark"
-            >
-              Pedir visita ({seleccionados.size})
-            </button>
+              )
+            })}
           </div>
-        </div>
-      )}
+        )}
 
-      {modalPresupuesto && (
-        <PedirPresupuestoModal
-          prestadores={seleccionadosInfo}
-          barrioId={barrioId}
-          onClose={() => setModalPresupuesto(false)}
-          onEnviado={() => {
-            setEnviados((e) => {
-              const copia = { ...e }
-              for (const id of seleccionados) copia[id] = true
-              return copia
-            })
-            setSeleccionados(new Set())
-            setModalPresupuesto(false)
-            setHayPedidos(true)
-          }}
-        />
-      )}
+        {barrioId && (
+          <p className="mt-6 text-sm text-gray-500">
+            ¿No encontrás a quien buscás?{' '}
+            <button type="button" onClick={() => setModalProponer(true)} className="font-medium text-gg-green hover:underline">
+              Proponé un prestador
+            </button>
+          </p>
+        )}
 
-      {modalProponer && (
-        <ProponerPrestadorModal barrioId={barrioId || null} onClose={() => setModalProponer(false)} onEnviado={() => setModalProponer(false)} />
-      )}
-    </main>
+        {seleccionados.size > 0 && (
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white px-6 py-3 shadow-lg">
+            <div className="mx-auto flex max-w-6xl items-center justify-between">
+              <span className="text-sm text-gray-700">{seleccionados.size} seleccionado{seleccionados.size === 1 ? '' : 's'}</span>
+              <button
+                type="button"
+                onClick={() => setModalPresupuesto(true)}
+                className="rounded-lg bg-gg-green px-4 py-2 text-sm font-medium text-white hover:bg-gg-dark"
+              >
+                Pedir visita ({seleccionados.size})
+              </button>
+            </div>
+          </div>
+        )}
+
+        {modalPresupuesto && (
+          <PedirPresupuestoModal
+            prestadores={seleccionadosInfo}
+            barrioId={barrioId}
+            onClose={() => setModalPresupuesto(false)}
+            onEnviado={() => {
+              setEnviados((e) => {
+                const copia = { ...e }
+                for (const id of seleccionados) copia[id] = true
+                return copia
+              })
+              setSeleccionados(new Set())
+              setModalPresupuesto(false)
+            }}
+          />
+        )}
+
+        {modalProponer && (
+          <ProponerPrestadorModal barrioId={barrioId || null} onClose={() => setModalProponer(false)} onEnviado={() => setModalProponer(false)} />
+        )}
+      </main>
+    </>
   )
 }

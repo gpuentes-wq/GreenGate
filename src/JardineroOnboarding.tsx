@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { supabase } from './lib/supabase'
-import { Campo, inputClass } from './ui'
+import { Campo, inputClass, SubTab } from './ui'
 import { servicioLabel } from './labels'
 import { SolicitudesPanel } from './SolicitudesPanel'
 import { JardineroPanel } from './JardineroPanel'
@@ -504,17 +504,3 @@ function PanelPreview() {
   )
 }
 
-function SubTab({ activo, onClick, children }: { activo: boolean; onClick: () => void; children: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={
-        '-mb-px border-b-2 px-4 py-2 text-sm font-medium transition ' +
-        (activo ? 'border-gg-green text-gg-dark' : 'border-transparent text-gray-500 hover:text-gray-700')
-      }
-    >
-      {children}
-    </button>
-  )
-}
