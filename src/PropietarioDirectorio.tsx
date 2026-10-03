@@ -21,7 +21,9 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
   >({ tipo: 'listado' })
 
   const [barrios, setBarrios] = useState<BarrioOpt[]>([])
-  const [barrioId, setBarrioId] = useState(barrioInicial)
+  // Fijo durante toda la sesión: viene resuelto de SeleccionRol y no se cambia
+  // desde esta pantalla. Deja de ser estado porque nada lo modifica.
+  const barrioId = barrioInicial
   const [prestadorBarrio, setPrestadorBarrio] = useState<PrestadorBarrioRow[]>([])
 
   const [prestadores, setPrestadores] = useState<PrestadorDirectorio[]>([])
@@ -96,6 +98,9 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
     }
     return m
   }, [especialidades])
+
+  // El nombre del barrio para mostrarlo: llega recién cuando cargó la lista.
+  const nombreBarrio = barrios.find((b) => b.id === barrioId)?.nombre ?? ''
 
   const habilitadosEnBarrio = useMemo(() => {
     if (!barrioId) return new Set<string>()
@@ -178,21 +183,19 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
         </p>
 
         <div className="mb-6 flex flex-wrap items-center gap-4">
-          <label className="flex items-center gap-2 text-sm text-gray-600">
+          {/* El barrio se muestra, no se elige: SeleccionRol ya obligó a
+              elegirlo para entrar, así que un selector acá solo permitía
+              equivocarse y salir del propio barrio. Cuando exista el login
+              vuelve a tener sentido como selector, pero acotado a los barrios
+              donde el propietario tenga lotes. */}
+          <span className="flex items-center gap-2 text-sm text-gray-600">
             Tu barrio
-            <select
-              className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-              value={barrioId}
-              onChange={(e) => setBarrioId(e.target.value)}
-            >
-              <option value="">Elegí un barrio…</option>
-              {barrios.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.nombre}
-                </option>
-              ))}
-            </select>
-          </label>
+            {nombreBarrio && (
+              <span className="rounded-lg bg-gg-light px-3 py-1.5 text-sm font-medium text-gg-dark">
+                {nombreBarrio}
+              </span>
+            )}
+          </span>
           {barrioId && (
             <>
               <input
@@ -234,7 +237,9 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
         {loading ? (
           <p className="text-gray-500">Cargando…</p>
         ) : !barrioId ? (
-          <EmptyState>Elegí tu barrio arriba para ver los jardineros disponibles.</EmptyState>
+          <EmptyState>
+            No pudimos identificar tu barrio. Volvé al inicio con “Cambiar de rol” y elegilo de nuevo.
+          </EmptyState>
         ) : lista.length === 0 ? (
           <EmptyState>No hay jardineros que coincidan con el filtro.</EmptyState>
         ) : (
