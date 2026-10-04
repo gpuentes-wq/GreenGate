@@ -1,12 +1,38 @@
 # GreenGate · Estrategia de piloto y validación de interés
 
-Documento de referencia sobre cómo validar el interés de los 3 tipos de usuario (administración, propietarios, jardineros) antes de dar acceso al MVP.
+Documento de referencia sobre cómo validar el interés de los 3 tipos de usuario (administración, propietarios, jardineros) y cómo se mide el uso del MVP una vez abierto el acceso.
 
 ## Principio general
 
-**No se entrega acceso al MVP hasta validar interés real.** El piloto primero mide interés (respuestas, disposición a usarlo) y recién a quien muestre interés genuino se lo invita a probar la app.
+**El piloto mide interés y, desde octubre de 2026, también uso.** Originalmente el principio era más estricto —*no se entrega acceso al MVP hasta validar interés real*— y la landing no enlazaba a la app.
 
-> **Estado (sep 2026):** el principio se respeta. La landing junta interés con su propio formulario y **no enlaza a la app**. Si en algún momento se decide abrir el acceso desde la landing —para que cualquiera pruebe sin pasar por el filtro—, es un cambio de estrategia consciente, no un detalle de implementación: cambia qué mide el experimento (pasa de "interés declarado" a "uso exploratorio"). El riesgo técnico de esa apertura bajó: el RLS quedó activado y el borrado cerrado (`supabase/rls-piloto.sql`), así que quien tenga el link ya no puede destruir datos. Sigue pudiendo leerlos y crear filas, que es aceptable con datos ficticios.
+> **Cambio de estrategia (oct 2026).** El mentor del Módulo 6 cerró su devolución con *"el MVP ya está en un punto donde conviene abrirlo y aprender del uso real"*, y pidió para la instancia siguiente **más comportamiento observado y menos interés declarado**. Se abrió el acceso. Es un cambio consciente de qué mide el experimento: pasa de *"cuánta gente dice que le interesa"* a *"cuánta gente llega hasta pedir una visita"*, que es una señal mucho más difícil de falsear.
+>
+> La apertura se hizo posible porque antes bajaron los dos riesgos que la bloqueaban:
+>
+> 1. **Riesgo de datos.** El RLS quedó activado y el borrado cerrado (`supabase/rls-piloto.sql`): quien tenga el link ya no puede destruir nada. Puede leer y crear filas, aceptable con datos ficticios.
+> 2. **Riesgo de contaminación.** El acceso público entra a un **barrio de demostración aislado** (`supabase/seed-barrio-demo.sql`), no a los barrios del piloto. Sin ese aislamiento, un visitante curioso le mandaba un WhatsApp a un jardinero real, le inflaba el puntaje del directorio y le llenaba el panel de pedidos de prueba.
+
+### Cómo funciona el acceso abierto
+
+- El link público es **`/?demo=1`**. Entra directo como propietario en el barrio de demostración, sin pasar por la selección de rol.
+- **No se puede cambiar de rol.** Ni por el botón ni por el logo: un visitante que llegara al panel de un jardinero estaría viendo las solicitudes de una persona real.
+- Una **franja de aviso** declara que los jardineros y las reseñas son ficticios y que nadie recibe sus mensajes. Es necesario: sin eso, alguien puede creer que contrató a un jardinero de verdad.
+- Al final del recorrido, una **invitación a dejar los datos** en el formulario de la landing. Sin ese cierre, el visitante prueba, le gusta y se va sin dejar rastro — que es exactamente el aprendizaje que la apertura busca capturar.
+
+### Qué se mide ahora
+
+Todo sale de consultar el barrio demo, sin herramientas de analítica:
+
+| Métrica | De dónde sale |
+|---|---|
+| Visitantes que llegaron a pedir una visita | `pedido` del barrio demo |
+| Cuántos jardineros compararon por pedido | `solicitud` agrupada por `pedido_id` |
+| Cuántos llegaron a elegir | solicitudes en estado `elegida` |
+| Cuántos dejaron reseña | `valoracion` con `solicitud_id` no nulo |
+| Cuántos pidieron ser contactados | envíos del formulario en Netlify |
+
+El embudo entre la primera y la última fila es el dato que el Módulo 6 pedía y que el interés declarado no podía dar.
 
 ## Insight clave que define el orden
 

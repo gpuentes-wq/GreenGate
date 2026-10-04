@@ -15,7 +15,15 @@ type PrestadorBarrioRow = { prestador_id: string; barrio_id: string; habilitado:
 
 // barrioInicial llega de la pantalla de selección de rol; el selector de barrio
 // se mantiene igual, para poder cambiar sin volver al inicio.
-export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioInicial?: string }) {
+export default function PropietarioDirectorio({
+  barrioInicial = '',
+  demo = false,
+}: {
+  barrioInicial?: string
+  // Modo demostración: el visitante entró por el link público de la landing.
+  // Solo cambia qué se le ofrece al final del recorrido; el producto es el mismo.
+  demo?: boolean
+}) {
   const [vista, setVista] = useState<
     { tipo: 'listado' } | { tipo: 'perfil'; prestadorId: string } | { tipo: 'presupuestos' }
   >({ tipo: 'listado' })
@@ -188,14 +196,16 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
               equivocarse y salir del propio barrio. Cuando exista el login
               vuelve a tener sentido como selector, pero acotado a los barrios
               donde el propietario tenga lotes. */}
-          <span className="flex items-center gap-2 text-sm text-gray-600">
-            Tu barrio
-            {nombreBarrio && (
+          {/* Se muestra entero o no se muestra: un "Tu barrio" sin el nombre
+              al lado queda colgado si la consulta demora o falla. */}
+          {nombreBarrio && (
+            <span className="flex items-center gap-2 text-sm text-gray-600">
+              Tu barrio
               <span className="rounded-lg bg-gg-light px-3 py-1.5 text-sm font-medium text-gg-dark">
                 {nombreBarrio}
               </span>
-            )}
-          </span>
+            </span>
+          )}
           {barrioId && (
             <>
               <input
@@ -228,9 +238,23 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
           )}
         </div>
 
+        {/* El detalle técnico sirve para diagnosticar y no se pierde, pero no
+            se le muestra a un visitante: "TypeError: Failed to fetch" parece
+            que la app está rota. El caso más común es el proyecto de Supabase
+            despertándose, que se resuelve reintentando. */}
         {error && (
           <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-700">
-            No se pudieron cargar los datos: {error}
+            {demo ? (
+              <>
+                Estamos teniendo un problema para cargar los jardineros.{' '}
+                <button type="button" onClick={() => location.reload()} className="font-medium underline">
+                  Probá de nuevo
+                </button>{' '}
+                en un minuto.
+              </>
+            ) : (
+              <>No se pudieron cargar los datos: {error}</>
+            )}
           </div>
         )}
 
@@ -240,6 +264,11 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
           <EmptyState>
             No pudimos identificar tu barrio. Volvé al inicio con “Cambiar de rol” y elegilo de nuevo.
           </EmptyState>
+        ) : error ? (
+          // Si la carga falló, el cartel de arriba ya lo explica. Decirle
+          // además que "no coinciden con el filtro" lo manda a tocar filtros
+          // que no son el problema.
+          null
         ) : lista.length === 0 ? (
           <EmptyState>No hay jardineros que coincidan con el filtro.</EmptyState>
         ) : (
@@ -353,6 +382,30 @@ export default function PropietarioDirectorio({ barrioInicial = '' }: { barrioIn
               Proponé un prestador
             </button>
           </p>
+        )}
+
+        {/* El punto de abrir la demo no es que la miren, es aprender de quién
+            la usa. Sin esto, el visitante prueba, le gusta y se va sin dejar
+            rastro. El texto cambia una vez que pidió una visita: ahí ya sabe
+            para qué sirve y la pregunta tiene sentido. */}
+        {demo && (
+          <div className="mt-8 rounded-xl border border-gg-light bg-gg-light/40 p-5">
+            <h2 className="text-base font-semibold text-gg-dark">
+              {Object.keys(enviados).length > 0
+                ? '¿Te gustaría poder hacer esto en tu barrio?'
+                : '¿Te gustaría tener GreenGate en tu barrio?'}
+            </h2>
+            <p className="mt-1 text-sm text-gray-600">
+              Este es un barrio de demostración. Estamos sumando los primeros barrios reales: dejanos tus
+              datos y te contamos cómo seguir.
+            </p>
+            <a
+              href="/landing/#sumate"
+              className="mt-4 inline-block rounded-lg bg-gg-green px-4 py-2 text-sm font-medium text-white hover:bg-gg-dark"
+            >
+              Estoy interesado
+            </a>
+          </div>
         )}
 
         {seleccionados.size > 0 && (
