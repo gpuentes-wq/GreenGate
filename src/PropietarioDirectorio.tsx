@@ -170,7 +170,7 @@ export default function PropietarioDirectorio({
     return (
       <>
         {pestanas}
-        <MisPresupuestos barrioId={barrioId} />
+        <MisPresupuestos barrioId={barrioId} demo={demo} />
       </>
     )
   }

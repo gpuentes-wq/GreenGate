@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
-import { EmptyState } from './ui'
+import { EmptyState, Modal } from './ui'
 import { misPedidos } from './misPedidos'
 import { cuandoLabel, esHoy, ordenDisponibilidad } from './labels'
 import { DejarResena } from './DejarResena'
@@ -104,7 +104,7 @@ function mensajeWhatsApp(barrio: string | null, descripcion: string | null, desd
 // Sin onVolver: la pantalla vive dentro de las pestañas del propietario, y la
 // pestaña "Directorio" ya es el camino de vuelta. Un enlace propio justo
 // debajo de esa pestaña repetía la misma acción a diez píxeles.
-export function MisPresupuestos({ barrioId }: { barrioId: string }) {
+export function MisPresupuestos({ barrioId, demo = false }: { barrioId: string; demo?: boolean }) {
   const [pedidos, setPedidos] = useState<Pedido[]>([])
   const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>([])
   const [prestadores, setPrestadores] = useState<Record<string, PrestadorLite>>({})
@@ -125,6 +125,11 @@ export function MisPresupuestos({ barrioId }: { barrioId: string }) {
   // distinguir — que es justamente lo que promete.
   const [conResena, setConResena] = useState<Set<string>>(new Set())
   const [resenando, setResenando] = useState<string | null>(null)
+  // Solo en demo: en vez de abrir WhatsApp con un número ficticio —que no
+  // lleva a ningún lado y confunde más de lo que explica— se muestra qué
+  // pasaría. Es el paso donde la app termina y empieza la conversación, y es
+  // justo lo que un visitante necesita entender para evaluar el producto.
+  const [explicando, setExplicando] = useState<{ nombre: string; mensaje: string } | null>(null)
 
   useEffect(() => {
     async function cargar() {
@@ -408,20 +413,39 @@ export function MisPresupuestos({ barrioId }: { barrioId: string }) {
                               ✓ Lo elegiste. Le avisamos en su panel.
                             </p>
                             {celulares[c.prestador_id] ? (
-                              <a
-                                href={`https://wa.me/${paraWhatsApp(celulares[c.prestador_id])}?text=${encodeURIComponent(
-                                  mensajeWhatsApp(
-                                    (pedido.barrio_id && barrios[pedido.barrio_id]) || null,
-                                    pedido.descripcion,
-                                    c.disponible_desde,
-                                  ),
-                                )}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-block w-full rounded-lg bg-gg-green px-3 py-1.5 text-center text-sm font-medium text-white transition hover:bg-gg-dark sm:w-auto"
-                              >
-                                Coordinar por WhatsApp
-                              </a>
+                              demo ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setExplicando({
+                                      nombre: p ? nombreDe(p) : 'el jardinero',
+                                      mensaje: mensajeWhatsApp(
+                                        (pedido.barrio_id && barrios[pedido.barrio_id]) || null,
+                                        pedido.descripcion,
+                                        c.disponible_desde,
+                                      ),
+                                    })
+                                  }
+                                  className="w-full rounded-lg bg-gg-green px-3 py-1.5 text-center text-sm font-medium text-white transition hover:bg-gg-dark sm:w-auto"
+                                >
+                                  Coordinar por WhatsApp
+                                </button>
+                              ) : (
+                                <a
+                                  href={`https://wa.me/${paraWhatsApp(celulares[c.prestador_id])}?text=${encodeURIComponent(
+                                    mensajeWhatsApp(
+                                      (pedido.barrio_id && barrios[pedido.barrio_id]) || null,
+                                      pedido.descripcion,
+                                      c.disponible_desde,
+                                    ),
+                                  )}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-block w-full rounded-lg bg-gg-green px-3 py-1.5 text-center text-sm font-medium text-white transition hover:bg-gg-dark sm:w-auto"
+                                >
+                                  Coordinar por WhatsApp
+                                </a>
+                              )
                             ) : (
                               <p className="text-xs text-gray-500">
                                 No tiene celular cargado. Avisale a la administración de tu barrio.
@@ -532,6 +556,42 @@ export function MisPresupuestos({ barrioId }: { barrioId: string }) {
             )
           })}
         </div>
+      )}
+
+      {explicando && (
+        <Modal titulo="Cómo sigue desde acá" onClose={() => setExplicando(null)}>
+          <div className="space-y-3 text-sm text-gray-600">
+            <p>
+              Acá termina la app y empieza la conversación. Al tocar este botón se abre WhatsApp con{' '}
+              <strong>{explicando.nombre}</strong> y un mensaje ya escrito, para que no tengas que explicar
+              de nuevo qué pediste:
+            </p>
+            {/* Mostrar el mensaje real y no describirlo: es la diferencia entre
+                entender el circuito y que te lo cuenten. */}
+            <p className="rounded-lg bg-gg-light/50 p-3 italic text-gg-dark">“{explicando.mensaje}”</p>
+            <p>
+              A partir de ahí coordinan entre ustedes la visita y, cuando él ve el jardín, el precio.{' '}
+              <strong>GreenGate no cobra ni interviene en el pago.</strong>
+            </p>
+            <p>
+              Cuando el trabajo esté hecho vas a poder dejarle una reseña desde esta misma pantalla, y eso
+              es lo que ayuda al próximo vecino a elegir.
+            </p>
+            <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-800">
+              Como estás en el barrio de demostración, el mensaje no se envía: {explicando.nombre} es un
+              perfil ficticio.
+            </p>
+          </div>
+          <div className="flex justify-end pt-4">
+            <button
+              type="button"
+              onClick={() => setExplicando(null)}
+              className="rounded-lg bg-gg-green px-4 py-2 text-sm font-medium text-white hover:bg-gg-dark"
+            >
+              Entendido
+            </button>
+          </div>
+        </Modal>
       )}
     </main>
   )
