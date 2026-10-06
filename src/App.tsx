@@ -38,6 +38,16 @@ export default function App() {
   // visitante en la vista de propietario. Si se pudiera salir, terminaría en
   // el panel de un jardinero real viendo sus solicitudes.
   const [demo] = useState(() => param('demo') !== null)
+  // Entró por un link directo, sin pasar por elegir rol. En ese caso el
+  // encabezado es informativo: ni el logo ni el botón de cambiar de rol
+  // navegan. Son los dos la misma puerta, así que esconder uno solo no
+  // serviría de nada.
+  //
+  // Para el visitante de la demo es contención: no puede terminar en el panel
+  // de un jardinero real. Para el jardinero que abre su propio link es que ya
+  // está donde tiene que estar — la selección de rol existe para encontrar tu
+  // pantalla, y él la salteó justamente porque el link lo trajo acá.
+  const [accesoDirecto] = useState(() => param('demo') !== null || param('jardinero') !== null)
   const [vista, setVista] = useState<Vista>(() => {
     const solicitudId = param('resena')
     if (solicitudId) return { tipo: 'resena', solicitudId }
@@ -53,10 +63,7 @@ export default function App() {
     <div className="min-h-screen bg-gray-50 text-gray-800">
       <header className="bg-gg-green text-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
-          {/* En demo el logo no navega: es la otra puerta de salida hacia la
-              selección de rol, y dejarla abierta vaciaría de sentido ocultar
-              el botón de al lado. */}
-          {demo ? (
+          {accesoDirecto ? (
             <span className="flex items-center gap-2 font-semibold">🌿 GreenGate</span>
           ) : (
             <button
@@ -67,7 +74,7 @@ export default function App() {
               🌿 GreenGate
             </button>
           )}
-          {!enInicio && !demo && (
+          {!enInicio && !accesoDirecto && (
             <button
               type="button"
               onClick={() => setVista({ tipo: 'inicio' })}
