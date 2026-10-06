@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from './lib/supabase'
 import type { PrestadorDirectorio } from './types'
-import { Insignia, EmptyState, Tarjeta, Switch } from './ui'
+import { Insignia, EmptyState, Tarjeta, Switch, BotonCopiar, linkAcceso } from './ui'
 import { ValidarPrestadorModal } from './ValidarPrestadorModal'
 import { AltaPrestadorModal } from './AltaPrestadorModal'
 import { alertaVencimiento, badgesPrestador, prestadorVerificado, type VerificacionRow, type IntegranteRow } from './verificacion'
@@ -448,13 +448,25 @@ export function AdminBarrioPanel({ onVerMultibarrio }: { onVerMultibarrio?: () =
                               etiqueta={`Habilitar a ${nombreMostrar(p)} en este barrio`}
                             />
                           </td>
-                          <td className="px-4 py-2 text-right">
-                            <button
-                              onClick={() => setValidar({ id: p.id, nombre: nombreMostrar(p) })}
-                              className="rounded-lg border border-gg-green px-3 py-1 text-sm font-medium text-gg-green hover:bg-gg-light"
-                            >
-                              Validar
-                            </button>
+                          <td className="px-4 py-2">
+                            <div className="flex items-center justify-end gap-2">
+                              {/* El jardinero que carga la administración nunca
+                                  abrió la app: este es el link que hay que
+                                  mandarle para que entre a su panel. */}
+                              <BotonCopiar
+                                valor={linkAcceso(p.id)}
+                                title={`Link para que ${nombreMostrar(p)} entre directo a su panel`}
+                                className="rounded-lg border border-gray-300 px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                              >
+                                Copiar su link
+                              </BotonCopiar>
+                              <button
+                                onClick={() => setValidar({ id: p.id, nombre: nombreMostrar(p) })}
+                                className="rounded-lg border border-gg-green px-3 py-1 text-sm font-medium text-gg-green hover:bg-gg-light"
+                              >
+                                Validar
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       )

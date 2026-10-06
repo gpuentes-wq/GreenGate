@@ -17,8 +17,9 @@ const BARRIO_DEMO = 'dd000000-0000-0000-0000-000000000001'
 // Se leen una sola vez al arrancar: después el parámetro deja de importar, y
 // agregar un router por dos casos sería desproporcionado.
 //
-//   ?resena=<id>  el jardinero se lo pasa al vecino por WhatsApp
-//   ?demo         el link público de la landing, para probar la app
+//   ?resena=<id>     el jardinero se lo pasa al vecino por WhatsApp
+//   ?demo            el link público de la landing, para probar la app
+//   ?jardinero=<id>  el acceso directo del jardinero a su propio panel
 function param(nombre: string): string | null {
   try {
     return new URLSearchParams(window.location.search).get(nombre)
@@ -41,6 +42,8 @@ export default function App() {
     const solicitudId = param('resena')
     if (solicitudId) return { tipo: 'resena', solicitudId }
     if (param('demo') !== null) return { tipo: 'propietario', barrioId: BARRIO_DEMO }
+    const prestadorId = param('jardinero')
+    if (prestadorId) return { tipo: 'jardinero', prestadorId }
     return { tipo: 'inicio' }
   })
   const configIncompleta = !ANON || ANON === 'TU_ANON_KEY_ACA'

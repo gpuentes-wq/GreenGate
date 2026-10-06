@@ -1,4 +1,54 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+
+// El link personal del jardinero. Hoy, para ver si le llegaron solicitudes,
+// tiene que abrir la app, elegir "soy jardinero" y buscarse en una lista. Con
+// este link es un toque desde favoritos o desde un WhatsApp guardado. No es una
+// notificación, pero baja tanto el costo de revisar que cambia la frecuencia —
+// que es el problema real mientras no exista un canal de aviso.
+//
+// No expone nada nuevo: sin login, cualquiera puede elegir cualquier perfil de
+// esa misma lista. Cuando haya Supabase Auth, este link pasa a ser la invitación
+// y deja de dar acceso por sí solo.
+export function linkAcceso(prestadorId: string): string {
+  return `${window.location.origin}/?jardinero=${prestadorId}`
+}
+
+export function BotonCopiar({
+  valor,
+  className,
+  title,
+  children = 'Copiar',
+}: {
+  valor: string
+  className?: string
+  title?: string
+  children?: ReactNode
+}) {
+  const [copiado, setCopiado] = useState(false)
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(valor)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    } catch {
+      // El portapapeles no está disponible en http ni en navegadores viejos.
+      // No se avisa nada: el campo de al lado queda seleccionable para copiar
+      // a mano, que es el mismo resultado con un paso más.
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={copiar}
+      title={title}
+      className={className ?? 'shrink-0 rounded-lg bg-gg-green px-3 py-2 text-sm font-medium text-white hover:bg-gg-dark'}
+    >
+      {copiado ? '¡Copiado!' : children}
+    </button>
+  )
+}
 
 export function Insignia({ ok, label }: { ok: boolean; label: string }) {
   return (

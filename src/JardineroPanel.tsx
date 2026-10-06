@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import { servicioLabel } from './labels'
-import { Tarjeta, EmptyState, Switch } from './ui'
+import { Tarjeta, EmptyState, Switch, BotonCopiar, linkAcceso, inputClass } from './ui'
 import { VerificacionesResumen } from './VerificacionesResumen'
 import { alertaVencimiento } from './verificacion'
 
@@ -254,6 +254,27 @@ export function JardineroPanel({
           <Tarjeta titulo="Clientes activos" valor={clientesActivos} />
           <Tarjeta titulo="Pedidos respondidos" valor={presupuestosRealizados} />
           <Tarjeta titulo="Servicios activos" valor={(servicioPrincipal ? 1 : 0) + especialidades.length} />
+        </div>
+      </section>
+
+      {/* Mientras no haya un canal de aviso, el problema no es que el jardinero
+          no quiera revisar: es que revisar cuesta tres pasos —abrir la app,
+          elegir el rol, buscarse en una lista—. Con el link guardado es uno. */}
+      <section className="rounded-xl border border-gray-200 bg-white p-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Tu acceso directo</h3>
+        <p className="mt-2 text-sm text-gray-600">
+          Guardá este link en favoritos o mandátelo por WhatsApp: entra a tu panel sin tener que buscarte
+          en la lista. Así podés revisar en un toque si te llegaron solicitudes nuevas.
+        </p>
+        <div className="mt-3 flex gap-2">
+          <input
+            readOnly
+            value={linkAcceso(prestadorId)}
+            onFocus={(e) => e.currentTarget.select()}
+            className={inputClass + ' bg-gray-50 text-gray-600'}
+            aria-label="Tu link de acceso directo"
+          />
+          <BotonCopiar valor={linkAcceso(prestadorId)} />
         </div>
       </section>
 
